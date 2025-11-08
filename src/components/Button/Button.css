@@ -1,0 +1,33 @@
+.custom-btn {
+  padding: 12px;
+  border-radius: 8px;
+  background: #48c6ef;
+  color: #fff;
+  border: none;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.15s;
+}
+.custom-btn:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.btn-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid #fff;
+  border-top: 2.5px solid #48c6ef;
+  border-radius: 50%;
+  animation: spinner 0.9s linear infinite;
+  margin-right: 8px;
+}
+@keyframes spinner {
+  to { transform: rotate(360deg); }
+}

@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -10,7 +11,7 @@ function App() {
         <Route path="/login" element={<Login />} />
 
         <Route
-          path="/admin"
+          path="/home"
           element={
             <ProtectedRoute roleRequired="admin">
               <AdminDashboard />
@@ -18,8 +19,8 @@ function App() {
           }
         />
 
-        {/* Par défaut, la racine peut rediriger vers /login */}
-        <Route path="/" element={<Login />} />
+        {/* Option : rediriger la racine vers /login */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );

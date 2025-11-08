@@ -4,9 +4,9 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useAuth } from "../context/AuthContext";
-import Input from "../components/Input/Input";
-import PasswordInput from "../components/Input/PasswordInput";
-import Button from "../components/Button/Button";
+import Input from "../components/ui/Input/Input";
+import PasswordInput from "../components/ui/Input/PasswordInput";
+import Button from "../components/ui/Button/Button";
 import "./Login.css";
 
 const schema = yup.object().shape({

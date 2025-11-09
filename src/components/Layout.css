@@ -1,0 +1,25 @@
+.dashboard-layout {
+  min-height: 100vh;
+  background: #f3f6fa;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-layout__main {
+  display: flex;
+  flex: 1;
+}
+
+.dashboard-content {
+  flex: 1;
+  padding: 35px 32px 35px 32px;
+  min-height: calc(100vh - 56px);
+  h2 {
+        color: #48c6ef;
+  }
+}
+@media (max-width: 900px) {
+  .dashboard-content {
+    padding: 18px 7px 18px 7px;
+  }
+}

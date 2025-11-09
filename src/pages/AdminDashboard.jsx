@@ -1,14 +1,12 @@
+import Layout from "../components/Layout";
+
 export default function AdminDashboard() {
   return (
-    <div>
-      <h1>Bienvenue Admin</h1>
-      <ul>
-        <li>Gestion des comptes</li>
-        <li>Gestion des rôles & permissions</li>
-        <li>Audit des accès & sécurité</li>
-        <li>Paramétrage IA et Messagerie</li>
-      </ul>
-      {/* Tu pourras créer ici les liens vers les modules/detail plus tard */}
-    </div>
+    <Layout>
+      {/* Ton contenu du dashboard ici, ex: */}
+      <h1>Bienvenue sur le dashboard Admin</h1>
+      <p>Ici tu peux gérer les utilisateurs, rôles, patients, etc.</p>
+      {/* Placeholders pour modules */}
+    </Layout>
   );
 }

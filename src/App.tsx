@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Users from "./pages/Users";
+import Users, { PrivateRoute } from "./pages/Users";
 import UserDetail from "./pages/UserDetail";
 
 import UserProfile from "./pages/UserProfile";
@@ -24,7 +24,10 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/users" element={<Users />} />
+        {/* <Route path="/users" element={<Users />} /> */}
+
+        <Route path="/users" element={<PrivateRoute requiredRole="admin"><Users /></PrivateRoute>}/>
+
         <Route path="/users/:id/edit" element={<UserDetail />} />
         
         <Route path="/users/:id" element={<UserProfile />} />

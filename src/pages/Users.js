@@ -1,3 +1,4 @@
+import { Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -34,6 +35,15 @@ const iconShow = (
     <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z" />
   </svg>
 );
+
+
+export function PrivateRoute({ children, requiredRole }) {
+  const { token, role } = useAuth();
+  if (!token || role !== requiredRole) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
 
 export default function Users() {
   const { token, role } = useAuth();

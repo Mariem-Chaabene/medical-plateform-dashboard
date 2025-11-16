@@ -2,10 +2,17 @@ import "./Navbar.css";
 import Avatar from "./ui/Avatar/Avatar";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login"); // ← Redirige juste après
+  };
 
   return (
     <nav className="navbar">
@@ -65,7 +72,7 @@ export default function Navbar() {
             <hr className="navbar__dropdown__hr" />
             <button
               className="navbar__dropdown__item navbar__dropdown__signout"
-              onClick={logout}
+              onClick={handleLogout}
             >
               <span className="navbar__dropdown__icon">
                 {/* Sign out icon */}

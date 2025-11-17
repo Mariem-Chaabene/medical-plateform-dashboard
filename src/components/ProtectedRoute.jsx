@@ -1,13 +1,22 @@
 import { Navigate } from "react-router-dom";
+import React from "react";
 
-export default function ProtectedRoute({ children, roleRequired }) {
+
+type ProtectedRouteProps = {
+  children: React.ReactNode;
+  roleRequired?: string;
+};
+
+export default function ProtectedRoute({ children, roleRequired }: ProtectedRouteProps): JSX.Element | null {
   const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
+  const role  = localStorage.getItem("role");
 
-  // Securité front, le backend doit aussi protéger
-  if (!token || role !== roleRequired) {
-    // Redirige automatiquement vers /login si pas connecté ou mauvais rôle
+  if (!token) {
     return <Navigate to="/login" replace />;
   }
-  return children;
+  if (roleRequired && role !== roleRequired) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>; // Toujours retourne un JSX
 }

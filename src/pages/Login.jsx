@@ -28,8 +28,7 @@ export default function Login() {
     setError("");
     try {
       const role = await login(values);
-      if (role === "admin") navigate("/home");
-      else setError("Accès réservé à l'admin.");
+      navigate("/home");
     } catch (e) {
       setError("Identifiants invalides ou erreur serveur.");
     } finally {

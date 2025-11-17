@@ -1,16 +1,50 @@
 import "./Sidebar.css";
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+
+const MENU_CONFIG = {
+  admin: [
+    { label: "Dashboard", path: "/home" },
+    { label: "Utilisateurs", path: "/users" },
+    { label: "Rôles", path: "/roles" },
+    { label: "Patients", path: "/patients" },
+  ],
+  medecin: [
+    { label: "Dashboard", path: "/home" },
+    { label: "Mes patients", path: "/patients" },
+    { label: "Consultations", path: "/consultations" },
+    { label: "Prescriptions", path: "/prescriptions" },
+  ],
+  infirmier: [
+    { label: "Dashboard", path: "/home" },
+    { label: "Patients (Lecture)", path: "/patients" },
+    { label: "Traitements", path: "/traitements" },
+  ],
+  patient: [
+    { label: "Dashboard", path: "/home" },
+    { label: "Mon dossier médical", path: "/mon-dme" },
+    { label: "Mes rendez-vous", path: "/mes-rendezvous" },
+  ],
+};
 
 export default function Sidebar() {
+
+  const { role } = useAuth();    
+  const links = MENU_CONFIG[role] || []; 
+
   return (
     <aside className="sidebar">
       <div className="sidebar__title">Menu</div>
-      <nav className="sidebar__nav">
-        <NavLink to="/home" className={({ isActive }) => isActive ? "sidebar__link active" : "sidebar__link"}>Dashboard</NavLink>
-        <NavLink to="/users" className="sidebar__link">Utilisateurs</NavLink>
-        <NavLink to="/roles" className="sidebar__link">Rôles</NavLink>
-        <NavLink to="/patients" className="sidebar__link">Patients</NavLink>
-        {/* Ajoute d'autres liens ici */}
+     <nav className="sidebar__nav">
+        {/* Map liste des links selon le rôle */}
+        {links.map(({label, path}) => (
+          <NavLink key={path}
+            to={path}
+            className={({ isActive }) => isActive ? "sidebar__link active" : "sidebar__link"}
+          >
+            {label}
+          </NavLink>
+        ))}
       </nav>
     </aside>
   );

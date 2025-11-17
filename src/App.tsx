@@ -1,13 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/Login";
-import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Users, { PrivateRoute } from "./pages/Users";
 import UserDetail from "./pages/UserDetail";
 
 import UserProfile from "./pages/UserProfile";
 import CreateUser from "./pages/CreateUser";
+import Home from "./pages/Home";
 
 
 function App() {
@@ -19,9 +19,9 @@ function App() {
         <Route
           path="/home"
           element={
-            <ProtectedRoute roleRequired="admin">
-              <AdminDashboard />
-            </ProtectedRoute>
+            <ProtectedRoute>
+              <Home />
+              </ProtectedRoute>
           }
         />
         {/* <Route path="/users" element={<Users />} /> */}

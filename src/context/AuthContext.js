@@ -7,14 +7,29 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem("token") || "");
   const [role, setRole] = useState(localStorage.getItem("role") || "");
 
+  // Écriture dans le localStorage à chaque maj
   useEffect(() => {
-    if (token) {
-      localStorage.setItem("token", token);
-    }
-    if (role) {
-      localStorage.setItem("role", role);
-    }
+    if (token) localStorage.setItem("token", token);
+    if (role) localStorage.setItem("role", role);
   }, [token, role]);
+
+  // Hydratation "auto" du user si token présent
+  useEffect(() => {
+    if (!user && token) {
+      fetch("http://127.0.0.1:8000/api/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((profile) => {
+          setRole(profile.roles[0]?.name ?? "");
+          setUser(profile);
+        })
+        .catch(() => {
+          logout();
+        });
+    }
+    // eslint-disable-next-line
+  }, [token]);
 
   const login = ({ email, password }) => {
     return fetch("http://127.0.0.1:8000/api/login", {
@@ -25,7 +40,6 @@ export function AuthProvider({ children }) {
       .then((res) => res.json())
       .then(async (data) => {
         setToken(data.token);
-        // fetch le profile
         const meRes = await fetch("http://127.0.0.1:8000/api/me", {
           headers: { Authorization: `Bearer ${data.token}` },
         });

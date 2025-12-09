@@ -17,8 +17,8 @@ const MENU_CONFIG = {
   ],
   infirmier: [
     { label: "Dashboard", path: "/home" },
-    { label: "Patients (Lecture)", path: "/patients" },
-    { label: "Traitements", path: "/traitements" },
+    { label: "Patients", path: "/patients" },
+    { label: "Salle D'attente", path: "/salle-attente" },
   ],
   patient: [
     { label: "Dashboard", path: "/home" },

@@ -77,7 +77,6 @@ export default function CreatePatient() {
       },
       body: JSON.stringify(values),
     });
-    console.log(res);
     if (res.ok) {
       setSuccess("Patient créé !");
       setTimeout(() => navigate("/patients"), 1250);

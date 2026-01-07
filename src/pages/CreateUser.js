@@ -171,7 +171,6 @@ export default function CreateUser() {
       },
       body: JSON.stringify(values),
     });
-    console.log(res);
     if (res.ok) {
       setSuccess("Utilisateur créé !");
       setTimeout(() => navigate("/users"), 1250);

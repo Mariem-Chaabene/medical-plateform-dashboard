@@ -44,7 +44,6 @@ export default function PatientEdit() {
     fieldRows.push(patientFields.slice(i, i + 2));
 
   useEffect(() => {
-    console.log("Edit patient id =", id);
     fetch(`http://127.0.0.1:8000/api/patients/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     })

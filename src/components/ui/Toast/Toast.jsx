@@ -1,13 +1,20 @@
-import React from "react";
-
 export default function Toast({ type = "success", title, message, onClose }) {
   if (!message && !title) return null;
 
   const bg = "#fff";
   const borderLeft =
-    type === "success" ? "4px solid #28a745" : type === "error" ? "4px solid #dc3545" : "4px solid #ffc107";
+    type === "success"
+      ? "4px solid #16a34a"
+      : type === "error"
+      ? "4px solid #dc2626"
+      : "4px solid #f59e0b";
+
   const iconColor =
-    type === "success" ? "#28a745" : type === "error" ? "#dc3545" : "#ffc107";
+    type === "success"
+      ? "#16a34a"
+      : type === "error"
+      ? "#dc2626"
+      : "#f59e0b";
 
   return (
     <div
@@ -18,7 +25,7 @@ export default function Toast({ type = "success", title, message, onClose }) {
         zIndex: 9999,
         background: bg,
         borderRadius: 12,
-        boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+        boxShadow: "0 10px 30px rgba(15,23,42,0.18)",
         padding: "12px 18px 12px 14px",
         minWidth: 260,
         maxWidth: 360,
@@ -28,12 +35,12 @@ export default function Toast({ type = "success", title, message, onClose }) {
         borderLeft,
       }}
     >
-      {/* Icône cercle avec check */}
       <div
         style={{
           width: 22,
           height: 22,
           borderRadius: "50%",
+          background: "#ecfdf5",
           border: `2px solid ${iconColor}`,
           display: "flex",
           alignItems: "center",
@@ -70,10 +77,11 @@ export default function Toast({ type = "success", title, message, onClose }) {
           border: "none",
           background: "transparent",
           cursor: "pointer",
-          fontSize: 16,
+          fontSize: 18,
           color: "#9ca3af",
           padding: 0,
           marginLeft: 6,
+          lineHeight: 1,
         }}
       >
         ×

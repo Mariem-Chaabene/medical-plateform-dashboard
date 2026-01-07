@@ -8,12 +8,10 @@ import Avatar from "../components/ui/Avatar/Avatar";
 import Filter from "../components/ui/Filter/Filter";
 import Checkbox from "../components/ui/Checkbox/Checkbox";
 import Pagination from "../components/ui/Pagination/Pagination";
-import Modal from "../components/ui/Modal/Modal";
 import Input from "../components/ui/Input/Input";
 import Toast from "../components/ui/Toast/Toast";
 import { useToast } from "../hooks/useToast";
 
-// Icons
 const iconEdit = (
   <svg
     width="20"
@@ -56,8 +54,7 @@ const iconDme = (
   </svg>
 );
 
-// Icône salle d'attente
-const iconWaiting = (
+const iconRdv = (
   <svg
     width="20"
     height="20"
@@ -66,13 +63,15 @@ const iconWaiting = (
     strokeWidth="2"
     viewBox="0 0 24 24"
   >
-    <circle cx="12" cy="8" r="3" />
-    <path d="M5 20c0-3 3-5 7-5s7 2 7 5" />
-    <path d="M4 8h2M18 8h2" />
+    <rect x="3" y="4" width="18" height="17" rx="2" />
+    <path d="M8 2v4" />
+    <path d="M16 2v4" />
+    <path d="M3 9h18" />
+    <rect x="8" y="13" width="3" height="3" rx="0.5" />
+    <rect x="13" y="13" width="3" height="3" rx="0.5" />
   </svg>
 );
 
-// Fonction pour calculer l’âge à partir de la date de naissance
 function getAge(dateString) {
   if (!dateString) return "";
   const today = new Date();
@@ -99,20 +98,6 @@ export default function Patients() {
   const [perPage, setPerPage] = useState(10);
   const { toast, showToast, hideToast } = useToast();
 
-  // état modal salle d’attente
-  const [waitingModalOpen, setWaitingModalOpen] = useState(false);
-  const [waitingForm, setWaitingForm] = useState({
-    patientId: null,
-    patientName: "",
-    medecinId: "",
-    date: "",
-    time: "",
-    motif: "",
-  });
-  const [waitingError, setWaitingError] = useState("");
-  const [waitingLoading, setWaitingLoading] = useState(false);
-
-  // Filtrage par recherche
   const filteredPatients = patients.filter((p) =>
     (
       (p.user?.name || "") +
@@ -134,7 +119,6 @@ export default function Patients() {
   );
 
   useEffect(() => {
-    // patients
     fetch("http://127.0.0.1:8000/api/patients", {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -148,13 +132,11 @@ export default function Patients() {
         setLoading(false);
       });
 
-    // médecins
     fetch("http://127.0.0.1:8000/api/medecins", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
       .then((data) => {
-        // si ton API renvoie { data: [...] } au lieu de [...]
         const list = Array.isArray(data)
           ? data
           : Array.isArray(data.data)
@@ -164,7 +146,7 @@ export default function Patients() {
       })
       .catch(() => {
         console.error("Erreur chargement médecins");
-        setMedecins([]); // garantir un tableau
+        setMedecins([]);
       });
   }, [token]);
 
@@ -235,65 +217,6 @@ export default function Patients() {
     { label: "Âge", key: "date_naissance", render: getAge },
   ];
 
-  const handleWaitingChange = (name, value) => {
-    setWaitingForm((f) => ({ ...f, [name]: value }));
-  };
-
-  const submitWaitingForm = async (e) => {
-    e.preventDefault();
-    setWaitingError("");
-
-    if (!waitingForm.medecinId || !waitingForm.date || !waitingForm.time || !waitingForm.motif) {
-      setWaitingError("Veuillez choisir un médecin, une date , heure et saisir le motif.");
-      return;
-    }
-
-    const dateHeure = `${waitingForm.date} ${waitingForm.time}:00`;
-
-    try {
-      setWaitingLoading(true);
-      const res = await fetch("http://127.0.0.1:8000/api/salle-attente", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          patient_id: waitingForm.patientId,
-          medecin_id: waitingForm.medecinId,
-          date_heure: dateHeure,
-          motif: waitingForm.motif,
-        }),
-      });
-      const text = await res.text();
-      console.log("POST /salle-attente status", res.status);
-      console.log("POST /salle-attente raw body", text);
-      console.log("payload salle-attente", {
-        patient_id: waitingForm.patientId,
-        medecin_id: waitingForm.medecinId,
-        date_heure: dateHeure,
-        motif: waitingForm.motif,
-      });
-
-      if (!res.ok) {
-        console.error(await res.json());
-        setWaitingError("Erreur lors de l'ajout en salle d'attente.");
-      } else {
-        setWaitingModalOpen(false);
-
-        showToast({
-          type: "success",
-          title: "Succès",
-          message: `Le patient ${waitingForm.patientName} a été ajouté à la salle d'attente avec succès.`,
-        });
-      }
-    } catch (err) {
-      console.error(err);
-      setWaitingError("Erreur réseau.");
-    } finally {
-      setWaitingLoading(false);
-    }
-  };
 
   const actions = [
     {
@@ -307,22 +230,10 @@ export default function Patients() {
       handler: (row) => navigate(`/patients/${row.id}`),
     },
     {
-      label: "Salle d'attente",
-      icon: iconWaiting,
+      label: "Rendez-vous",
+      icon: iconRdv,
       handler: (row) => {
-        const fullname = `${row.user?.name || ""} ${
-          row.user?.surname || ""
-        }`.trim();
-        setWaitingForm({
-          patientId: row.id,
-          patientName: fullname,
-          medecinId: "",
-          date: "",
-          time: "",
-          motif: "",
-        });
-        setWaitingError("");
-        setWaitingModalOpen(true);
+        navigate(`/rendez-vous?patient_id=${row.id}`);
       },
     },
   ];
@@ -453,129 +364,6 @@ export default function Patients() {
         }}
       />
 
-      {/* Modal Salle d'attente */}
-      <Modal
-        isOpen={waitingModalOpen}
-        title="Ajouter à la salle d'attente"
-        onClose={() => setWaitingModalOpen(false)}
-      >
-        <form onSubmit={submitWaitingForm}>
-          <div className="form-group" style={{ marginBottom: 16 }}>
-            <label className="form-label">Patient</label>
-            <Input
-              type="text"
-              name="patientName"
-              value={waitingForm.patientName}
-              disabled
-            />
-          </div>
-
-          <div className="form-group" style={{ marginBottom: 16 }}>
-            <label className="form-label">Médecin</label>
-            <select
-              className="custom-input"
-              value={waitingForm.medecinId}
-              onChange={(e) => handleWaitingChange("medecinId", e.target.value)}
-            >
-              <option value="">Sélectionner un médecin</option>
-              {Array.isArray(medecins) &&
-                medecins.map((m) => {
-                  const u = m.user || {};
-                  const label =
-                    (u.name && u.name.trim()) ||
-                    (u.email && u.email.trim()) ||
-                    `Médecin #${u.id}`;
-                  return (
-                    <option key={m.id} value={u.id}>
-                      {label} {u.surname || ""}
-                    </option>
-                  );
-                })}
-            </select>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              marginBottom: 16,
-            }}
-          >
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">Date</label>
-              <Input
-                type="date"
-                name="date"
-                value={waitingForm.date}
-                onChange={(e) => handleWaitingChange("date", e.target.value)}
-              />
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">Heure</label>
-              <Input
-                type="time"
-                name="time"
-                value={waitingForm.time}
-                onChange={(e) => handleWaitingChange("time", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="form-group" style={{ marginBottom: 16 }}>
-            <label className="form-label">Motif</label>
-            <Input
-              type="text"
-              name="motif"
-              placeholder="Motif de la consultation"
-              value={waitingForm.motif}
-              onChange={(e) => handleWaitingChange("motif", e.target.value)}
-              required
-            />
-          </div>
-
-          {waitingError && (
-            <div style={{ color: "red", marginBottom: 12 }}>{waitingError}</div>
-          )}
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: 12,
-              marginTop: 8,
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setWaitingModalOpen(false)}
-              style={{
-                background: "#f5f5f5",
-                border: "none",
-                borderRadius: 10,
-                padding: "8px 18px",
-                cursor: "pointer",
-              }}
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={waitingLoading}
-              style={{
-                background: "#2979ff",
-                color: "#fff",
-                border: "none",
-                borderRadius: 10,
-                padding: "8px 22px",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
-            >
-              {waitingLoading ? "En cours..." : "Ajouter"}
-            </button>
-          </div>
-        </form>
-      </Modal>
       {toast.visible && (
         <Toast
           type={toast.type}

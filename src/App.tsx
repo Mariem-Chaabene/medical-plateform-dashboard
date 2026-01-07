@@ -13,6 +13,7 @@ import CreatePatient from "./pages/CreatePatient";
 import PatientShow from "./pages/PatientShow";
 import PatientEdit from "./pages/PatientEdit";
 import SalleAttente from "./pages/SalleAttente";
+import RendezVous from "./pages/RendezVous";
 
 function App() {
   return (
@@ -28,7 +29,6 @@ function App() {
               </ProtectedRoute>
           }
         />
-        {/* <Route path="/users" element={<Users />} /> */}
 
         <Route path="/users" element={<PrivateRoute requiredRole="admin"><Users /></PrivateRoute>}/>
 
@@ -47,7 +47,7 @@ function App() {
         <Route path="/patients/:id/edit" element={<PatientEdit />} />
         
         <Route path="/salle-attente" element={<ProtectedRoute><SalleAttente /></ProtectedRoute>} />
-
+        <Route path="/rendez-vous" element={ <ProtectedRoute> <RendezVous /></ProtectedRoute>}/>
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>

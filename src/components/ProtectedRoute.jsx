@@ -18,5 +18,5 @@ export default function ProtectedRoute({ children, roleRequired }: ProtectedRout
     return <Navigate to="/login" replace />;
   }
 
-  return <>{children}</>; // Toujours retourne un JSX
+  return <>{children}</>; 
 }

@@ -1,30 +1,15 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import Table from "../components/ui/Table/Table";
 import Avatar from "../components/ui/Avatar/Avatar";
 import Filter from "../components/ui/Filter/Filter";
 import Pagination from "../components/ui/Pagination/Pagination";
-
-// Icône pour voir le DME par exemple (optionnel)
-const iconShow = (
-  <svg
-    width="20"
-    height="20"
-    fill="none"
-    stroke="#b2b2b2"
-    strokeWidth="2"
-    viewBox="0 0 24 24"
-  >
-    ircle cx="12" cy="12" r="3" />
-    <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z" />
-  </svg>
-);
+import Dropdown from "../components/ui/Dropdown/Dropdown";
+import Dialog from "../components/ui/Dialog/Dialog";
 
 export default function SalleAttente() {
   const { token } = useAuth();
-  const navigate = useNavigate();
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +18,14 @@ export default function SalleAttente() {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
-
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+    confirmColor: "#ef4444",
+    isLoading: false,
+  });
   const fetchSalleAttente = () => {
     setLoading(true);
     fetch("http://127.0.0.1:8000/api/salle-attente", {
@@ -54,7 +46,6 @@ export default function SalleAttente() {
     fetchSalleAttente();
   }, [token]);
 
-  // Filtrage
   const filtered = items.filter((item) => {
     const patient = item.patient || {};
     const user = patient.user || {};
@@ -77,7 +68,6 @@ export default function SalleAttente() {
     return text;
   });
 
-  // Pagination
   const totalItems = filtered.length;
   const pageCount = Math.ceil(totalItems / perPage);
   const pagedItems = filtered.slice(
@@ -85,7 +75,94 @@ export default function SalleAttente() {
     currentPage * perPage
   );
 
-  // Colonnes pour Table
+  const statusMeta = {
+    en_attente: { label: "En attente", color: "#fbbf24" },
+    en_consultation: { label: "En consultation", color: "#60a5fa" },
+    termine: { label: "Terminé", color: "#10b981" },
+  };
+
+  const statusOptions = Object.entries(statusMeta).map(([value, meta]) => ({
+    value,
+    label: meta.label,
+    color: meta.color,
+  }));
+
+  const handleStatusChange = async (row, newStatus) => {
+    if (newStatus === "termine" || newStatus === "annule") {
+      const isTermine = newStatus === "termine";
+      setConfirmDialog({
+        isOpen: true,
+        title: isTermine
+          ? "Marquer comme terminé ?"
+          : "Annuler la consultation ?",
+        message: isTermine
+          ? `${
+              row.patient?.user?.name || "Le patient"
+            } sera retiré de la salle d'attente. Cette action est définitive.`
+          : `${
+              row.patient?.user?.name || "Le patient"
+            } sera retiré de la salle d'attente. Cette action est définitive.`,
+        confirmText: isTermine ? "Terminer" : "Annuler",
+        confirmColor: isTermine ? "#10b981" : "#ef4444",
+        isLoading: false,
+        onConfirm: async () => {
+          setConfirmDialog((prev) => ({ ...prev, isLoading: true }));
+
+          try {
+            const res = await fetch(
+              `http://127.0.0.1:8000/api/salle-attente/${row.id}/statut`,
+              {
+                method: "PATCH",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ statut: newStatus }),
+              }
+            );
+
+            if (!res.ok) {
+              console.error(await res.text());
+              setError("Erreur lors de la modification du statut.");
+            } else {
+              fetchSalleAttente();
+              setConfirmDialog({ isOpen: false });
+            }
+          } catch (e) {
+            console.error(e);
+            setError("Erreur réseau.");
+          } finally {
+            setConfirmDialog((prev) => ({ ...prev, isLoading: false }));
+          }
+        },
+      });
+    } else {
+      try {
+        const res = await fetch(
+          `http://127.0.0.1:8000/api/salle-attente/${row.id}/statut`,
+          {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ statut: newStatus }),
+          }
+        );
+
+        if (!res.ok) {
+          console.error(await res.text());
+          setError("Erreur lors de la modification du statut.");
+        } else {
+          fetchSalleAttente();
+        }
+      } catch (e) {
+        console.error(e);
+        setError("Erreur réseau.");
+      }
+    }
+  };
+
   const columns = [
     {
       label: "Patient",
@@ -130,79 +207,42 @@ export default function SalleAttente() {
       },
     },
     {
-      label: "Heure",
+      label: "Date / Heure",
       key: "date_heure",
       render: (value, row) => {
-        const dt = row.date_heure ? new Date(row.date_heure) : null;
-        if (!dt) return "";
-        return dt.toLocaleTimeString("fr-FR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+        if (!row.date_heure) return "-";
+        const year = row.date_heure.slice(0, 4);
+        const month = row.date_heure.slice(5, 7);
+        const day = row.date_heure.slice(8, 10);
+        const time = row.date_heure.slice(11, 16);
+        return `${day}/${month}/${year} ${time}`;
       },
     },
     {
       label: "Statut",
       key: "statut",
       render: (value, row) => {
-        const handleStatutChange = async (newStatut) => {
-          await fetch(
-            `http://127.0.0.1:8000/api/salle-attente/${row.id}/statut`,
-            {
-              method: "PATCH",
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ statut: newStatut }),
-            }
-          );
-          fetchSalleAttente();
+        const meta = statusMeta[value] || {
+          label: value,
+          color: "#e5e7eb",
         };
-
         return (
-          <select
-            className="custom-input"
+          <Dropdown
             value={row.statut}
-            onChange={(e) => handleStatutChange(e.target.value)}
-          >
-            <option value="en_attente">En attente</option>
-            <option value="en_consultation">En consultation</option>
-            <option value="termine">Terminé</option>
-            <option value="annule">Annulé</option>
-          </select>
+            options={statusOptions}
+            pillLabel={meta.label}
+            pillColor={meta.color}
+            onChange={(newStatus) => handleStatusChange(row, newStatus)}
+          />
         );
       },
     },
     {
       label: "Motif",
       key: "motif",
-      render: (value, row) => {
-        const handleMotifBlur = async (e) => {
-          const newMotif = e.target.value;
-          await fetch(`http://127.0.0.1:8000/api/salle-attente/${row.id}`, {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ motif: newMotif }),
-          });
-          fetchSalleAttente();
-        };
-
-        return (
-          <input
-            className="custom-input"
-            defaultValue={row.motif || ""}
-            onBlur={handleMotifBlur}
-            placeholder="Motif..."
-          />
-        );
-      },
+      render: (_, row) => <span>{row.motif || "-"}</span>, 
     },
   ];
-
 
   return (
     <Layout>
@@ -257,11 +297,7 @@ export default function SalleAttente() {
           {pagedItems.length === 0 ? (
             <div>Aucun patient en attente pour aujourd'hui.</div>
           ) : (
-            <Table
-              columns={columns}
-              data={pagedItems}
-              searchable={false}
-            />
+            <Table columns={columns} data={pagedItems} searchable={false} />
           )}
 
           <Pagination
@@ -277,6 +313,16 @@ export default function SalleAttente() {
           />
         </>
       )}
+      <Dialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmText={confirmDialog.confirmText || "Confirmer"}
+        confirmColor={confirmDialog.confirmColor}
+        isLoading={confirmDialog.isLoading}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+      />
     </Layout>
   );
 }

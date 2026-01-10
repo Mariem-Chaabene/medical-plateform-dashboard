@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import Layout from "../components/Layout";
@@ -13,6 +13,67 @@ import Checkbox from "../components/ui/Checkbox/Checkbox";
 import Toast from "../components/ui/Toast/Toast";
 import Dialog from "../components/ui/Dialog/Dialog";
 import Spinner from "../components/ui/Spinner/Spinner";
+import CalendarModal from "../components/ui/Calendar/Calendar";
+function toCalendarEvents(rdvs) {
+  if (!Array.isArray(rdvs)) return [];
+
+  const statusColors = {
+    planned: { bg: "#fef3c7", text: "#92400e", border: "#fcd34d" },
+    confirme: { bg: "#dbeafe", text: "#1d4ed8", border: "#93c5fd" },
+    ensalleattente: { bg: "#ccfbf1", text: "#0f766e", border: "#5eead4" },
+    annule: { bg: "#fee2e2", text: "#991b1b", border: "#fca5a5" },
+    termine: { bg: "#dcfce7", text: "#15803d", border: "#86efac" },
+  };
+
+  return rdvs
+    .filter((r) => r?.date_heure) // ✅ IMPORTANT: date_heure (underscore)
+    .map((r) => {
+      const clean = r.date_heure.replace("Z", "").slice(0, 19); // ✅ date_heure
+      const [datePart, timePart] = clean.split("T");
+      const [y, m, d] = datePart.split("-").map(Number);
+
+      const startTime = timePart.slice(0, 5);
+      const [hh, mm] = startTime.split(":").map(Number);
+
+      const start = new Date(y, m - 1, d, hh, mm);
+      const end = new Date(start);
+      end.setMinutes(end.getMinutes() + 30);
+
+      const patientName = r?.patient?.user
+        ? `${r.patient.user.name} ${r.patient.user.surname}`
+        : "Patient";
+
+      const medecinName = r?.medecin
+        ? `${r.medecin.name || ""} ${r.medecin.surname || ""}`.trim() ||
+          "Médecin"
+        : "Médecin";
+
+      const title = `${patientName} - ${medecinName}`;
+
+      const c = statusColors[r?.statut] || {
+        bg: "#e5e7eb",
+        text: "#374151",
+        border: "#d1d5db",
+      };
+
+      return {
+        id: r.id,
+        title,
+        startDate: start,
+        endDate: end,
+        startTime,
+        endTime: `${end.getHours().toString().padStart(2, "0")}:${end
+          .getMinutes()
+          .toString()
+          .padStart(2, "0")}`,
+        color: c.bg,
+        textColor: c.text,
+        borderColor: c.border,
+        raw: r,
+      };
+    })
+    .filter(Boolean);
+}
 
 const iconEdit = (
   <svg
@@ -62,11 +123,14 @@ export default function RendezVous() {
   const { token } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
   const searchParams = new URLSearchParams(location.search);
   const preselectedPatientId = searchParams.get("patient_id");
-  const [selected, setSelected] = useState([]);
-
   const [items, setItems] = useState([]);
+
+  const [selected, setSelected] = useState([]);
+  const calendarEvents = useMemo(() => toCalendarEvents(items), [items]);
+
   const [medecins, setMedecins] = useState([]);
   const [patients, setPatients] = useState([]);
 
@@ -77,7 +141,7 @@ export default function RendezVous() {
   const [currentPage, setCurrentPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [loadingMutations, setLoadingMutations] = useState({});
-
+  const [calendarModalOpen, setCalendarModalOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
@@ -675,15 +739,7 @@ export default function RendezVous() {
     <Layout>
       <h2>Rendez-vous</h2>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: "16px",
-          marginBottom: "23px",
-          width: "100%",
-        }}
-      >
+      <div style={{ display: "flex", gap: 24, marginBottom: 24 }}>
         <div style={{ flexBasis: "70%", maxWidth: "70%" }}>
           <Filter
             placeholder="Recherche patient / médecin / motif..."
@@ -701,25 +757,36 @@ export default function RendezVous() {
         >
           <button
             style={{
-              background: "#f3f4f6",
-              color: "#4b5563",
+              background: "#48c6ef",
+              color: "#fff",
               fontWeight: 500,
-              border: "1px solid #e5e7eb",
-              borderRadius: 13,
-              padding: "11px 22px",
-              fontSize: 14,
-              cursor: loading ? "not-allowed" : "pointer",
+              border: "none",
+              borderRadius: 10,
+              padding: "11px",
+              width: "44px",
+              height: "44px",
+              cursor: "pointer",
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              opacity: loading ? 0.6 : 1,
+              justifyContent: "center",
             }}
-            onClick={loadData}
-            disabled={loading}
+            onClick={() => setCalendarModalOpen(true)}
+            title="Calendrier"
           >
-              Rafraîchir
+            <svg
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
           </button>
-
           <button
             style={{
               background: "#48c6ef",
@@ -727,6 +794,7 @@ export default function RendezVous() {
               fontWeight: 600,
               border: "none",
               borderRadius: 13,
+              height: "44px",
               padding: "11px 26px",
               fontSize: 15,
               cursor: "pointer",
@@ -1036,6 +1104,15 @@ export default function RendezVous() {
             pendingStatus: null,
           })
         }
+      />
+      <CalendarModal
+        isOpen={calendarModalOpen}
+        onClose={() => setCalendarModalOpen(false)}
+        events={calendarEvents} // ✅
+        onEventClick={(calendarEvent) => {
+          setCalendarModalOpen(false);
+          openEditModal(calendarEvent.raw);
+        }}
       />
     </Layout>
   );

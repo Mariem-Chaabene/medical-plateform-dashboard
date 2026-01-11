@@ -14,6 +14,7 @@ import PatientShow from "./pages/PatientShow";
 import PatientEdit from "./pages/PatientEdit";
 import SalleAttente from "./pages/SalleAttente";
 import RendezVous from "./pages/RendezVous";
+import MedecinDashboard from "./pages/MedecinDashboard";
 
 function App() {
   return (
@@ -45,7 +46,8 @@ function App() {
         <Route path="/patients/:id" element={<PatientShow />} />
 
         <Route path="/patients/:id/edit" element={<PatientEdit />} />
-        
+        <Route path="/medecin" element={<MedecinDashboard />} />
+
         <Route path="/salle-attente" element={<ProtectedRoute><SalleAttente /></ProtectedRoute>} />
         <Route path="/rendez-vous" element={ <ProtectedRoute> <RendezVous /></ProtectedRoute>}/>
         <Route path="/" element={<Navigate to="/login" replace />} />

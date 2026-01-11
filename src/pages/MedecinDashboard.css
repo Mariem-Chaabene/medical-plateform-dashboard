@@ -1,0 +1,14 @@
+.medecin-kpi-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: fit-content;
+  margin-top: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 900px) {
+  .medecin-kpi-row {
+    grid-template-columns: 1fr;
+  }
+}

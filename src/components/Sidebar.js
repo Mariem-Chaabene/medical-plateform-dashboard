@@ -9,9 +9,10 @@ const MENU_CONFIG = {
     { label: "Patients", path: "/patients" },
   ],
   medecin: [
-    { label: "Mes patients", path: "/patients" },
+    { label: "Dashboard", path: "/dashboard" },
     { label: "Consultations", path: "/consultations" },
     { label: "Prescriptions", path: "/prescriptions" },
+    { label: "Mes patients", path: "/patients" }
   ],
   infirmier: [
     { label: "Patients", path: "/patients" },

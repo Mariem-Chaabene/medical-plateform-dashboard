@@ -13,28 +13,33 @@ function calcAge(dateNaissance) {
   return age;
 }
 
-function formatSexe(v) {
-  if (!v) return "-";
-  const s = String(v).toLowerCase();
-  if (s === "m" || s === "male" || s === "homme") return "Homme";
-  if (s === "f" || s === "female" || s === "femme") return "Femme";
-  return String(v);
-}
-
 export default function PatientMiniCard({
-  variant = "patient", // ✅ "patient" | "vitals"
+  variant = "patient",
   title,
   patient,
   dme,
   vitals,
   onChangeVital,
+  submitAttempted = false,
+  errors = {},
 }) {
-  // ---------- DATA PATIENT ----------
   const user = patient?.user || {};
   const fullName =
     `${user?.name || ""} ${user?.surname || ""}`.trim() || "Patient";
 
   const age = calcAge(patient?.date_naissance);
+
+  // ✅ helpers pour affichage erreurs
+  const fieldStyle = (name) => ({
+    border: submitAttempted && errors[name] ? "1px solid #ef4444" : undefined,
+  });
+
+  const Err = ({ name }) =>
+    submitAttempted && errors[name] ? (
+      <div style={{ color: "#ef4444", fontSize: 12, marginTop: 4 }}>
+        {errors[name]}
+      </div>
+    ) : null;
 
   if (variant === "vitals") {
     return (
@@ -43,55 +48,67 @@ export default function PatientMiniCard({
 
         <div className="pmcVitalsStack">
           <div className="pmcField">
-            <label className="pmcLabel">Poids (kg)</label>
+            <label className="pmcLabel">Poids (kg) *</label>
             <Input
               type="number"
               value={vitals?.poids ?? ""}
               onChange={(e) => onChangeVital?.("poids", e.target.value)}
+              style={fieldStyle("poids")}
             />
+            <Err name="poids" />
           </div>
 
           <div className="pmcField">
-            <label className="pmcLabel">Taille (cm)</label>
+            <label className="pmcLabel">Taille (cm) *</label>
             <Input
               type="number"
               value={vitals?.taille ?? ""}
               onChange={(e) => onChangeVital?.("taille", e.target.value)}
+              style={fieldStyle("taille")}
             />
+            <Err name="taille" />
           </div>
+
           <div className="pmcField">
             <label className="pmcLabel">IMC</label>
             <Input type="text" value={vitals?.imc ?? ""} disabled />
           </div>
+
           <div className="pmcField">
-            <label className="pmcLabel">Température (°C)</label>
+            <label className="pmcLabel">Température (°C) *</label>
             <Input
               type="number"
               value={vitals?.temperature ?? ""}
               onChange={(e) => onChangeVital?.("temperature", e.target.value)}
+              style={fieldStyle("temperature")}
             />
+            <Err name="temperature" />
           </div>
 
           <div className="pmcField">
-            <label className="pmcLabel">Fréq. cardiaque</label>
+            <label className="pmcLabel">Fréq. cardiaque *</label>
             <Input
               type="number"
               value={vitals?.frequence_cardiaque ?? ""}
               onChange={(e) =>
                 onChangeVital?.("frequence_cardiaque", e.target.value)
               }
+              style={fieldStyle("frequence_cardiaque")}
             />
+            <Err name="frequence_cardiaque" />
           </div>
 
           <div className="pmcField">
-            <label className="pmcLabel">Pression artérielle</label>
+            <label className="pmcLabel">Pression artérielle *</label>
             <Input
               placeholder="ex: 12/8"
               value={vitals?.pression_arterielle ?? ""}
               onChange={(e) =>
                 onChangeVital?.("pression_arterielle", e.target.value)
               }
+              style={fieldStyle("pression_arterielle")}
             />
+            <Err name="pression_arterielle" />
           </div>
         </div>
       </div>

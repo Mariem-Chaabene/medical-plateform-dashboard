@@ -1,6 +1,5 @@
 .medecin-kpi-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   gap: 16px;
   width: fit-content;
   margin-top: 16px;
@@ -10,5 +9,88 @@
 @media (max-width: 900px) {
   .medecin-kpi-row {
     grid-template-columns: 1fr;
+  }
+}
+/* ✅ 3e card style KPI (Consultation en cours) */
+.kpi-current {
+  position: relative;
+  border-radius: 18px;
+  padding: 16px;
+  color: #111827;
+  background: transparent; /* ✅ pas de gros background */
+  border: 1px solid #eaeaea; /* léger comme une card */
+  box-shadow: 0 10px 22px rgba(31, 41, 55, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kpi-current__name {
+  font-size: 18px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.kpi-current__motif {
+  font-size: 12.5px;
+  color: #6b7280;
+  min-height: 16px;
+}
+
+.kpi-current__btn {
+  margin-top: auto;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 800;
+  cursor: pointer;
+  background: white;
+  border-color: red;
+  color: red;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.kpi-current__btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px red;
+}
+
+.kpi-current__btn:active {
+  transform: translateY(0px);
+}
+
+.kpi-current__btn.disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.kpi-current__btnIcon {
+  display: inline-flex;
+  transform: translateY(1px);
+}
+
+/* ✅ Animation pulse (attire l’attention) */
+.kpi-current__btn.pulse {
+  animation: pulseGlow 1.35s infinite;
+}
+
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 0 0 red;
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(72, 198, 239, 0);
+    transform: translateY(-1px);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(72, 198, 239, 0);
+    transform: translateY(0);
   }
 }

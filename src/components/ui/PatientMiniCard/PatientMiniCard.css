@@ -1,0 +1,86 @@
+.pmcCard {
+  width: 80%;
+  background: #fff;
+  border: 1px solid #eef2f7;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(31, 41, 55, 0.08);
+  padding: 16px;
+}
+
+.pmcCard__title {
+  font-weight: 800;
+  font-size: 14px;
+  color: #111827;
+  margin-bottom: 12px;
+}
+
+.pmcLabel {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 700;
+}
+
+.pmcValue {
+  font-size: 12.5px;
+  color: #111827;
+  font-weight: 800;
+}
+
+/* ---------- PATIENT CARD ---------- */
+.pmcDossier {
+  display: flex;
+  align-items: baseline;
+  width: fit-content;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px dashed #eef2f7;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.pmcPatientBody {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.pmcAvatarWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pmcAvatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+}
+
+.pmcInfoGrid {
+  flex: 1;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.pmcInfoItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+}
+
+/* ---------- VITALS CARD (STACK 1 PER LINE) ---------- */
+.pmcVitalsStack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pmcField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

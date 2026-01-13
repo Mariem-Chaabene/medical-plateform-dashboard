@@ -9,7 +9,7 @@ const MENU_CONFIG = {
     { label: "Patients", path: "/patients" },
   ],
   medecin: [
-    { label: "Dashboard", path: "/dashboard" },
+    { label: "Accueil", path: "/medecin" },
     { label: "Consultations", path: "/consultations" },
     { label: "Prescriptions", path: "/prescriptions" },
     { label: "Mes patients", path: "/patients" }
@@ -32,7 +32,6 @@ export default function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <div className="sidebar__title">Menu</div>
      <nav className="sidebar__nav">
         {links.map(({label, path}) => (
           <NavLink key={path}

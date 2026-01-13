@@ -6,6 +6,7 @@ import Input from "../components/ui/Input/Input";
 import Spinner from "../components/ui/Spinner/Spinner";
 import Toast from "../components/ui/Toast/Toast";
 import PatientMiniCard from "../components/ui/PatientMiniCard/PatientMiniCard";
+import Tabs from "../components/ui/Tabs/Tabs";
 
 function computeImc(poids, tailleCm) {
   const p = Number(poids);
@@ -25,6 +26,7 @@ export default function ConsultationForm() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [consult, setConsult] = useState(null);
+  const [activeTab, setActiveTab] = useState("consultation");
 
   const [form, setForm] = useState({
     motif: "",
@@ -239,146 +241,189 @@ export default function ConsultationForm() {
       {error && <div style={{ color: "red", fontWeight: "bold" }}>{error}</div>}
 
       {!loading && consult && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "360px 1fr",
-            gap: 16,
-            alignItems: "start",
-          }}
-        >
-          {/* ✅ colonne gauche */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <PatientMiniCard
-              variant="patient"
-              title="Informations Patient"
-              patient={consult?.patient}
-              dme={consult?.dme}
-            />
-
-            <PatientMiniCard
-              variant="vitals"
-              title="Constantes Vitales"
-              vitals={form}
-              onChangeVital={setField}
-              submitAttempted={submitAttempted}
-              errors={errors}
-            />
-          </div>
-
-          {/* ✅ colonne droite */}
+        <div style={{ display: "flex", gap: 16, flexDirection: "column" }}>
+          {/* Cards gauche (patient + constantes vitales) déjà chez toi */}
           <div
             style={{
-              background: "#fff",
-              border: "1px solid #eee",
-              borderRadius: 14,
-              padding: 16,
+              display: "flex",
+              alignItems: "flex-start"
             }}
           >
-            <div className="form-group" style={{ marginBottom: 12 }}>
-              <label className="form-label">Motif *</label>
-              <Input
-                value={form.motif}
-                onChange={(e) => setField("motif", e.target.value)}
-                style={{
-                  border:
-                    submitAttempted && errors.motif ? "1px solid red" : undefined,
-                }}
+            <div style={{ flexShrink: 0 , minWidth: 320 }}>
+              <PatientMiniCard
+                variant="patient"
+                patient={consult?.patient}
+                dme={consult?.dme}
+                title="Informations Patient"
               />
-              <Err name="motif" />
+              <div style={{ marginTop: 12 }}>
+                <PatientMiniCard
+                  variant="vitals"
+                  title="Constantes Vitales"
+                  vitals={form}
+                  onChangeVital={setField}
+                  submitAttempted={submitAttempted}
+                  errors={errors}
+                />
+              </div>
             </div>
 
-            <div className="form-group" style={{ marginBottom: 12 }}>
-              <label className="form-label">Diagnostic *</label>
-              <textarea
-                className="custom-input"
-                style={{
-                  minHeight: 90,
-                  padding: 10,
-                  border:
-                    submitAttempted && errors.diagnostic
-                      ? "1px solid red"
-                      : undefined,
-                }}
-                value={form.diagnostic}
-                onChange={(e) => setField("diagnostic", e.target.value)}
+            {/* ✅ colonne droite => Tabs */}
+            <div style={{ flex: 2, minWidth: 520 }}>
+              <Tabs
+                activeKey={activeTab}
+                onChange={setActiveTab}
+                tabs={[
+                  {
+                    key: "consultation",
+                    label: "Consultation",
+                    content: (
+                      <>
+                        {/* ✅ contenu “Consultation” = TON formulaire actuel */}
+                        <div
+                          className="form-group"
+                          style={{ marginBottom: 12 }}
+                        >
+                          <label className="form-label">Motif</label>
+                          <Input
+                            value={form.motif}
+                            onChange={(e) => setField("motif", e.target.value)}
+                          />
+                        </div>
+
+                        <div
+                          className="form-group"
+                          style={{ marginBottom: 12 }}
+                        >
+                          <label className="form-label">Diagnostic</label>
+                          <textarea
+                            className="custom-input"
+                            style={{ minHeight: 90, padding: 10 }}
+                            value={form.diagnostic}
+                            onChange={(e) =>
+                              setField("diagnostic", e.target.value)
+                            }
+                          />
+                        </div>
+
+                        <div
+                          className="form-group"
+                          style={{ marginBottom: 12 }}
+                        >
+                          <label className="form-label">Traitement</label>
+                          <textarea
+                            className="custom-input"
+                            style={{ minHeight: 90, padding: 10 }}
+                            value={form.traitement}
+                            onChange={(e) =>
+                              setField("traitement", e.target.value)
+                            }
+                          />
+                        </div>
+
+                        {/* Buttons save */}
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            gap: 12,
+                            marginTop: 14,
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => navigate("/medecin")}
+                            style={{
+                              background: "#f5f5f5",
+                              border: "none",
+                              borderRadius: 10,
+                              padding: "10px 18px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Retour
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={() => save(false)}
+                            style={{
+                              background: "#48c6ef",
+                              color: "#fff",
+                              border: "none",
+                              borderRadius: 10,
+                              padding: "10px 18px",
+                              cursor: "pointer",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {saving ? "En cours..." : "Enregistrer"}
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={() => save(true)}
+                            style={{
+                              background: "#10b981",
+                              color: "#fff",
+                              border: "none",
+                              borderRadius: 10,
+                              padding: "10px 18px",
+                              cursor: "pointer",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {saving ? "En cours..." : "Enregistrer et terminer"}
+                          </button>
+                        </div>
+                      </>
+                    ),
+                  },
+
+                  {
+                    key: "antecedents",
+                    label: "Antécédents",
+                    content: (
+                      <div>
+                        TODO: formulaire + liste antécédents (dropdown +
+                        remarques)
+                      </div>
+                    ),
+                  },
+                  {
+                    key: "examens",
+                    label: "Examens",
+                    content: (
+                      <div>TODO: dropdown type_examen + création examen</div>
+                    ),
+                  },
+                  {
+                    key: "analyses",
+                    label: "Analyses",
+                    content: (
+                      <div>TODO: dropdown type_analyse + création analyse</div>
+                    ),
+                  },
+                  {
+                    key: "ordonnance",
+                    label: "Ordonnance",
+                    content: (
+                      <div>TODO: lignes ordonnance (dropdown medicament)</div>
+                    ),
+                  },
+                  {
+                    key: "certificat",
+                    label: "Certificat",
+                    content: (
+                      <div>
+                        TODO: certificat (texte + génération PDF plus tard)
+                      </div>
+                    ),
+                  },
+                ]}
               />
-              <Err name="diagnostic" />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 12 }}>
-              <label className="form-label">Traitement *</label>
-              <textarea
-                className="custom-input"
-                style={{
-                  minHeight: 90,
-                  padding: 10,
-                  border:
-                    submitAttempted && errors.traitement
-                      ? "1px solid red"
-                      : undefined,
-                }}
-                value={form.traitement}
-                onChange={(e) => setField("traitement", e.target.value)}
-              />
-              <Err name="traitement" />
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 12,
-                marginTop: 14,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => navigate("/medecin")}
-                style={{
-                  background: "#f5f5f5",
-                  border: "none",
-                  borderRadius: 10,
-                  padding: "10px 18px",
-                  cursor: "pointer",
-                }}
-              >
-                Retour
-              </button>
-
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => save(false)}
-                style={{
-                  background: "#48c6ef",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 10,
-                  padding: "10px 18px",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                }}
-              >
-                {saving ? "En cours..." : "Enregistrer"}
-              </button>
-
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => save(true)}
-                style={{
-                  background: "#10b981",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 10,
-                  padding: "10px 18px",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                }}
-              >
-                {saving ? "En cours..." : "Enregistrer et terminer"}
-              </button>
             </div>
           </div>
         </div>

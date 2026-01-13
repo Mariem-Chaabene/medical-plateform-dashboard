@@ -1,0 +1,73 @@
+:root {
+  --brand: #48c6ef;
+  --border: #eef2f7;
+  --radius: 18px;
+  --shadow: 0 10px 30px rgba(31, 41, 55, 0.08);
+}
+
+.stabs {
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+/* ✅ bar = même card */
+.stabs__bar {
+  display: flex;
+  gap: 1px;                  
+  padding: 12px 12px 0 12px;
+  background: #fff;
+}
+
+/* tab normal */
+.stabs__tab {
+  border: 1px solid var(--border);
+  background: #f7fbff;
+  color: #111827;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 13px;
+  border-radius: 12px 12px 0 0; /* ✅ look onglet */
+  transition: 0.15s ease;
+  text-decoration: none;
+  position: relative;
+}
+
+/* hover sans underline */
+.stabs__tab:hover {
+  transform: translateY(-1px);
+  border-color: rgba(72, 198, 239, 0.35);
+  text-decoration: none;
+}
+
+/* ✅ actif = continuité avec le body */
+.stabs__tab.is-active {
+  background: var(--brand);
+  color: #fff;
+  border-color: transparent;
+
+  /* ✅ l’onglet "rentre" dans le panel */
+  margin-bottom: -1px;              /* ✅ colle au panel */
+  border-bottom: 1px solid #fff;    /* ✅ efface la ligne de séparation */
+  z-index: 2;                       /* ✅ au-dessus du panel */
+  box-shadow: 0 10px 22px rgba(72, 198, 239, 0.22);
+}
+
+/* ✅ panel collé (pas d’espace, continuité visuelle) */
+.stabs__panel {
+  padding: 16px;
+  background: #fff;
+  position: relative;
+  z-index: 1;
+}
+
+/* optionnel : focus */
+.stabs__tab:focus { outline: none; }
+.stabs__tab:focus-visible {
+  outline: 2px solid rgba(72, 198, 239, 0.45);
+  outline-offset: 2px;
+}

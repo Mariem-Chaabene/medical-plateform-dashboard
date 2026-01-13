@@ -24,8 +24,8 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-left: 20px;
-  margin-right: 20px;
+  margin-left: 15px;
+  margin-right: 15px;
 }
 .sidebar__link {
   color: #222;

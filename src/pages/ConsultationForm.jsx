@@ -7,6 +7,7 @@ import Spinner from "../components/ui/Spinner/Spinner";
 import Toast from "../components/ui/Toast/Toast";
 import PatientMiniCard from "../components/ui/PatientMiniCard/PatientMiniCard";
 import Tabs from "../components/ui/Tabs/Tabs";
+import Antecedents from "./Antecedents";
 
 function computeImc(poids, tailleCm) {
   const p = Number(poids);
@@ -246,10 +247,10 @@ export default function ConsultationForm() {
           <div
             style={{
               display: "flex",
-              alignItems: "flex-start"
+              alignItems: "flex-start",
             }}
           >
-            <div style={{ flexShrink: 0 , minWidth: 320 }}>
+            <div style={{ flexShrink: 0, minWidth: 320 }}>
               <PatientMiniCard
                 variant="patient"
                 patient={consult?.patient}
@@ -386,10 +387,7 @@ export default function ConsultationForm() {
                     key: "antecedents",
                     label: "Antécédents",
                     content: (
-                      <div>
-                        TODO: formulaire + liste antécédents (dropdown +
-                        remarques)
-                      </div>
+                      <Antecedents token={token} dmeId={consult?.dme?.id} />
                     ),
                   },
                   {

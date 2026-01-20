@@ -1,16 +1,14 @@
 :root {
   --brand: #48c6ef;
-  --border: #eef2f7;
+  /* --border: #eef2f7; */
   --radius: 18px;
   --shadow: 0 10px 30px rgba(31, 41, 55, 0.08);
 }
 
 .stabs {
   width: 100%;
-  background: #fff;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
   overflow: hidden;
 }
 
@@ -18,8 +16,6 @@
 .stabs__bar {
   display: flex;
   gap: 1px;                  
-  padding: 12px 12px 0 12px;
-  background: #fff;
 }
 
 /* tab normal */

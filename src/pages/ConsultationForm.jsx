@@ -8,6 +8,9 @@ import Toast from "../components/ui/Toast/Toast";
 import PatientMiniCard from "../components/ui/PatientMiniCard/PatientMiniCard";
 import Tabs from "../components/ui/Tabs/Tabs";
 import Antecedents from "./Antecedents";
+import Examens from "./Examens";
+import Analyses from "./Analyses";
+import Ordonnance from "./Ordonnance";
 
 function computeImc(poids, tailleCm) {
   const p = Number(poids);
@@ -387,28 +390,43 @@ export default function ConsultationForm() {
                     key: "antecedents",
                     label: "Antécédents",
                     content: (
-                      <Antecedents token={token} dmeId={consult?.dme?.id} />
+                      <Antecedents
+                        token={token}
+                        dmeId={consult?.dme?.id}
+                        consultationId={consult?.id}
+                      />
                     ),
                   },
                   {
                     key: "examens",
                     label: "Examens",
                     content: (
-                      <div>TODO: dropdown type_examen + création examen</div>
+                      <Examens
+                        token={token}
+                        dmeId={consult?.dme?.id}
+                        consultationId={consult?.id}
+                      />
                     ),
                   },
                   {
                     key: "analyses",
                     label: "Analyses",
                     content: (
-                      <div>TODO: dropdown type_analyse + création analyse</div>
+                      <Analyses
+                        token={token}
+                        dmeId={consult?.dme?.id}
+                        consultationId={consult?.id}
+                      />
                     ),
                   },
                   {
                     key: "ordonnance",
                     label: "Ordonnance",
                     content: (
-                      <div>TODO: lignes ordonnance (dropdown medicament)</div>
+                      <Ordonnance
+                        token={token}
+                        consultationId={id} // ou consult?.id
+                      />
                     ),
                   },
                   {

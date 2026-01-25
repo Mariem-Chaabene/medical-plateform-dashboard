@@ -29,11 +29,12 @@ export default function PatientMiniCard({
 
   const age = calcAge(patient?.date_naissance);
 
+  const groupeSanguin =
+    dme?.groupe_sanguin || patient?.dme?.groupe_sanguin || "—";
   // ✅ helpers pour affichage erreurs
   const fieldStyle = (name) => ({
     border: submitAttempted && errors[name] ? "1px solid #ef4444" : undefined,
   });
-
   const Err = ({ name }) =>
     submitAttempted && errors[name] ? (
       <div style={{ color: "#ef4444", fontSize: 12, marginTop: 4 }}>
@@ -134,6 +135,14 @@ export default function PatientMiniCard({
           <div className="pmcInfoItem">
             <span className="pmcLabel">Âge</span>
             <span className="pmcValue">{age === "-" ? "-" : `${age} ans`}</span>
+          </div>
+          <div className="pmcInfoItem">
+            <span className="pmcLabel">
+              Groupe sanguin
+            </span>
+            <span className="pmcValue">
+              {groupeSanguin}
+            </span>
           </div>
         </div>
       </div>

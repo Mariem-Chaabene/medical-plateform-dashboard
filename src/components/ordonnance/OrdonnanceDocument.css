@@ -1,0 +1,300 @@
+/* ===== écran ===== */
+.print-area{
+  position: absolute;
+  left: -99999px;
+  top: 0;
+}
+
+.no-print {}
+
+/* ===== feuille ordonnance ===== */
+.ordonnance{
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  background: #fff;
+  font-family: Arial, sans-serif;
+  color: #111827;
+  box-sizing: border-box;
+}
+
+/* HEADER */
+.ord-header{
+  position: relative;
+  height: 160px;
+  padding: 22px 22px 0 22px;
+  box-sizing: border-box;
+}
+
+.ord-header-left{
+  position: relative;
+  z-index: 3;
+}
+
+.ord-doctor-name{
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.05;
+  font-weight: 900;
+}
+
+.ord-doctor-name .first{
+  color: #2f8cff;
+  font-weight: 900;
+}
+
+.ord-doctor-name .last{
+  color: #70b9ff;
+  font-weight: 400;
+}
+
+.ord-qualification{
+  margin-top: 6px;
+  font-size: 11px;
+  letter-spacing: 6px;
+  font-weight: 700;
+  color: #a3afbf;
+  text-transform: uppercase;
+}
+
+/* Coordonnées */
+.ord-doctor-contact{
+  margin-top: 10px;
+  font-size: 12px;
+  color: #374151;
+  display: grid;
+  gap: 2px;
+  max-width: 520px;
+}
+
+.ord-contact-line{
+  display: grid;
+  grid-template-columns: 95px 1fr;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.ord-contact-label{
+  color: #9aa5b1;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 10px;
+}
+
+.ord-contact-value{
+  color: #111827;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+/* PLUS à droite */
+.ord-header-right{
+  position: absolute;
+  right: 18px;
+  top: 10px;
+  width: 200px;
+  height: 110px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.ord-plus{
+  position: absolute;
+  color: rgba(112, 185, 255, 0.55);
+}
+
+.ord-plus--xl{
+  width: 78px;
+  height: 78px;
+  right: 22px;
+  top: 6px;
+  color: rgba(112, 185, 255, 0.70);
+}
+.ord-plus--md{
+  width: 30px;
+  height: 30px;
+  right: 0px;
+  top: 0px;
+  color: rgba(112, 185, 255, 0.55);
+}
+.ord-plus--sm{
+  width: 18px;
+  height: 18px;
+  right: 8px;
+  top: 40px;
+  color: rgba(112, 185, 255, 0.42);
+}
+.ord-plus--xs{
+  width: 26px;
+  height: 26px;
+  right: 120px;
+  top: 62px;
+  color: rgba(112, 185, 255, 0.35);
+}
+
+/* Bas du header */
+.ord-bottom-line{
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: #c6ecff;
+  z-index: 1;
+}
+
+.ord-bottom-right{
+  position: absolute;
+  right: 0;
+  bottom: 4px;
+  width: 34%;
+  height: 24px;
+  background: #2f8cff;
+  z-index: 2;
+  clip-path: polygon(14% 0, 100% 0, 100% 100%, 0 100%);
+}
+
+/* META patient/date */
+.ord-meta{
+  display: flex;
+  justify-content: space-between;
+  padding: 18px 22px 0 22px;
+  box-sizing: border-box;
+}
+
+.ord-meta-title{
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+
+.ord-meta-value{
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.ord-meta-right{
+  text-align: right;
+}
+
+/* RX */
+.ord-rx{
+  padding: 18px 22px;
+  box-sizing: border-box;
+}
+
+.ord-rx-title{
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 10px;
+  color: #111827;
+}
+
+.ord-rx-list{
+  margin: 0;
+  padding-left: 18px;
+}
+
+.ord-rx-item{
+  margin-bottom: 12px;
+}
+
+.ord-rx-drug{
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.ord-rx-details{
+  margin-top: 4px;
+  font-size: 12px;
+  color: #374151;
+  line-height: 1.35;
+}
+
+.ord-empty{
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ===== impression ===== */
+@media print {
+  @page { size: A4; margin: 12mm; }
+
+  body{
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background: #fff !important;
+  }
+
+  /* Cache toute l'app */
+  body *{
+    visibility: hidden !important;
+  }
+
+  /* Montre seulement la feuille */
+  .print-area, .print-area *{
+    visibility: visible !important;
+  }
+
+  .print-area{
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    background: #fff !important;
+  }
+
+  .no-print{
+    display: none !important;
+  }
+}
+
+
+
+/* laisse de la place pour le footer signature */
+.ordonnance{
+  position: relative;
+  padding-bottom: 28mm; /* réserve espace bas page */
+}
+
+/* Footer en bas de page */
+.ord-footer{
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 18mm;
+  box-sizing: border-box;
+}
+
+.ord-signature-block{
+  width: 260px; /* ajuste si tu veux plus large */
+  margin-left: auto; /* à droite (comme souvent sur ordonnance) */
+  text-align: left;
+}
+
+.ord-signature-label{
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.ord-signature-line{
+  height: 1px;
+  background: #cbd5e1;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.ord-signature-name{
+  font-size: 12px;
+  color: #111827;
+  font-weight: 600;
+}

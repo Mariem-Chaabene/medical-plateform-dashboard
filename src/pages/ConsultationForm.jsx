@@ -425,7 +425,9 @@ export default function ConsultationForm() {
                     content: (
                       <Ordonnance
                         token={token}
-                        consultationId={id} // ou consult?.id
+                        consultationId={id}
+                        patient={consult?.dme?.patient || consult?.patient}
+                        medecin={consult?.medecin} // doit être Medecin::with('user')
                       />
                     ),
                   },

@@ -1,7 +1,7 @@
 // src/pages/Ordonnance.jsx
 import { useEffect, useMemo, useState } from "react";
 import Input from "../components/ui/Input/Input";
-import { useNavigate } from "react-router-dom";
+import OrdonnanceDocument from "../components/ordonnance/OrdonnanceDocument";
 
 const API = "http://127.0.0.1:8000/api";
 
@@ -13,6 +13,19 @@ const FREQUENCES = [
   "Toutes les 8h",
 ];
 
+const iconEdit = (
+  <svg
+    width="20"
+    height="20"
+    fill="none"
+    stroke="#b2b2b2"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+  >
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+  </svg>
+);
 export default function Ordonnance({
   token,
   consultationId,
@@ -23,12 +36,10 @@ export default function Ordonnance({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const navigate = useNavigate();
 
   const [medicaments, setMedicaments] = useState([]);
   const [lines, setLines] = useState([]);
 
-  // ✅ on récupère consultation -> patient & medecin si props non fournies
   const [consultation, setConsultation] = useState(null);
 
   const [showForm, setShowForm] = useState(false);
@@ -64,21 +75,37 @@ export default function Ordonnance({
     justifyContent: "center",
   };
 
-  const getMedLabel = (l) => {
-    if (l?.medicament?.libelle) return l.medicament.libelle;
-    const m = medicaments.find((x) => Number(x.id) === Number(l.medicament_id));
-    return m?.libelle || "—";
-  };
+  const PrintIcon = (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M7 8V4h10v4"
+        stroke="grey"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M7 17h10v3H7v-3Z"
+        stroke="grey"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path d="M6 12h12" stroke="grey" strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="M6 15H5a2 2 0 0 1-2-2v-2a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v2a2 2 0 0 1-2 2h-1"
+        stroke="grey"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 
-  const formatLine = (l) => {
-    return `${getMedLabel(l)} | ${l?.dosage || "—"} | ${l?.frequence || "—"} | ${l?.duree || "—"}`;
-  };
-
+  // ✅ patient/medecin : priorité aux props (pour éviter show consultation sans relations)
   const resolvedPatient =
     patientProp ||
+    consultation?.dme?.patient?.user ||
+    consultation?.patient?.user ||
     consultation?.dme?.patient ||
     consultation?.patient ||
-    consultation?.dme?.patient?.user ||
     null;
 
   const resolvedMedecin =
@@ -90,6 +117,29 @@ export default function Ordonnance({
     adresse: "Adresse du cabinet",
     ville: "Ville",
     tel: "Tél : 00 00 00 00 00",
+  };
+
+  // ✅ Enrichir lignes backend : si backend renvoie seulement medicament_id, on map avec la liste medicaments
+  const printableLines = useMemo(() => {
+    const medsById = new Map(medicaments.map((m) => [Number(m.id), m]));
+    return (lines || []).map((l) => {
+      const mid = Number(l?.medicament_id ?? l?.medicament?.id);
+      const medObj = l?.medicament?.libelle
+        ? l.medicament
+        : medsById.get(mid) || null;
+      return {
+        ...l,
+        medicament_id: mid || l?.medicament_id,
+        medicament: medObj,
+        medicament_libelle:
+          l?.medicament_libelle || medObj?.libelle || l?.medicament?.libelle,
+      };
+    });
+  }, [lines, medicaments]);
+
+  const formatLine = (l) => {
+    const label = l?.medicament?.libelle || l?.medicament_libelle || "—";
+    return `${label} | ${l?.dosage || "—"} | ${l?.frequence || "—"} | ${l?.duree || "—"}`;
   };
 
   const load = async () => {
@@ -106,7 +156,6 @@ export default function Ordonnance({
         fetch(`${API}/consultations/${consultationId}/ordonnance`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        // ✅ IMPORTANT pour récupérer patient/medecin si props absentes
         fetch(`${API}/consultations/${consultationId}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
@@ -122,10 +171,8 @@ export default function Ordonnance({
       // consultation
       const consTxt = await resCons.text();
       if (resCons.ok) {
-        const cons = consTxt ? JSON.parse(consTxt) : null;
-        setConsultation(cons);
+        setConsultation(consTxt ? JSON.parse(consTxt) : null);
       } else {
-        // si ton backend ne load pas encore relations dans show(), tu le verras ici
         setConsultation(null);
       }
 
@@ -196,7 +243,7 @@ export default function Ordonnance({
 
     const newLine = {
       medicament_id: Number(draft.medicament_id),
-      medicament: medObj,
+      medicament: medObj, // utile côté UI
       dosage: draft.dosage,
       frequence: draft.frequence,
       duree: draft.duree,
@@ -261,9 +308,40 @@ export default function Ordonnance({
     }
   };
 
+  // ✅ PRINT: ouvre modal + lance print (sans redirect)
+  const handlePrint = () => {
+    if (!printableLines.length) {
+      setError("Aucune ligne à imprimer.");
+      return;
+    }
+    setError("");
+    setTimeout(() => {
+      window.print();
+    }, 250);
+  };
+
   return (
     <div>
+      <style>{`
+  @page { size: A4; margin: 12mm; }
+  @media screen {
+    #print-root { display: none; }
+  }
+  @media print {
+    body * { visibility: hidden !important; }
+    #print-root, #print-root * { visibility: visible !important; }
+    #print-root {
+      display: block !important;
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 100%;
+    }
+  }
+`}</style>
+
       {loading && <div>Chargement...</div>}
+
       {error && (
         <div style={{ color: "red", fontWeight: 800, marginBottom: 10 }}>
           {error}
@@ -272,7 +350,7 @@ export default function Ordonnance({
 
       {!loading && (
         <>
-          {/* ✅ bouton + en haut à droite */}
+          {/* ✅ bouton + en haut à droite (PAS de print ici pour éviter doublon) */}
           <div
             style={{
               display: "flex",
@@ -302,7 +380,7 @@ export default function Ordonnance({
           </div>
 
           {/* ✅ tableau en dessous (si lignes) */}
-          {lines.length > 0 && (
+          {printableLines.length > 0 && (
             <div
               style={{
                 border: "1px solid #eef2f7",
@@ -323,10 +401,26 @@ export default function Ordonnance({
                 }}
               >
                 <div>Médicaments</div>
-                <div style={{ textAlign: "right" }}>Actions</div>
+                <div style={{ textAlign: "right" }}>
+                  <button
+                    type="button"
+                    onClick={handlePrint}
+                    style={{
+                      background: "transparent",
+                      border: "grey",
+                      padding: 0,
+                      cursor: "pointer",
+                      lineHeight: 0,
+                    }}
+                    title="Imprimer ordonnance"
+                    aria-label="Imprimer ordonnance"
+                  >
+                    {PrintIcon}
+                  </button>
+                </div>
               </div>
 
-              {lines.map((l, idx) => (
+              {printableLines.map((l, idx) => (
                 <div
                   key={idx}
                   style={{
@@ -334,7 +428,9 @@ export default function Ordonnance({
                     gridTemplateColumns: "1fr 120px",
                     padding: "10px 12px",
                     borderBottom:
-                      idx === lines.length - 1 ? "none" : "1px solid #eef2f7",
+                      idx === printableLines.length - 1
+                        ? "none"
+                        : "1px solid #eef2f7",
                     alignItems: "center",
                     gap: 10,
                   }}
@@ -356,7 +452,7 @@ export default function Ordonnance({
                       style={iconBtn}
                       title="Modifier"
                     >
-                      ✎
+                      {iconEdit}
                     </button>
 
                     <button
@@ -364,9 +460,8 @@ export default function Ordonnance({
                       onClick={() => removeLine(idx)}
                       style={{
                         ...iconBtn,
-                        background: "#fee2e2",
-                        borderColor: "#fecaca",
-                        color: "#991b1b",
+                        borderColor: "#b2b2b2",
+                        color: "#b2b2b2",
                       }}
                       title="Supprimer"
                     >
@@ -379,7 +474,7 @@ export default function Ordonnance({
           )}
 
           {/* ✅ actions en bas à droite */}
-          {lines.length > 0 && !showForm && (
+          {printableLines.length > 0 && !showForm && (
             <div
               style={{
                 display: "flex",
@@ -553,6 +648,15 @@ export default function Ordonnance({
           )}
         </>
       )}
+      <div id="print-root">
+        <OrdonnanceDocument
+          patient={resolvedPatient}
+          medecin={resolvedMedecin}
+          cabinet={resolvedCabinet}
+          lignes={printableLines}
+          dateOrdonnance={new Date().toISOString()}
+        />
+      </div>
     </div>
   );
 }

@@ -8,6 +8,35 @@ const ETATS = [
   { value: "termine", label: "Terminé" },
 ];
 
+const PrintIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M7 8V4h10v4"
+      stroke="grey"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path
+      d="M7 17h10v3H7v-3Z"
+      stroke="grey"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path
+      d="M6 12h12"
+      stroke="grey"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path
+      d="M6 15H5a2 2 0 0 1-2-2v-2a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v2a2 2 0 0 1-2 2h-1"
+      stroke="grey"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 export default function Examens({ token, dmeId, consultationId }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,7 +69,6 @@ export default function Examens({ token, dmeId, consultationId }) {
         fetch(`${API}/type-examens`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        // ✅ endpoint recommandé (voir section backend)
         fetch(`${API}/dmes/${dmeId}/examens`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
@@ -62,7 +90,7 @@ export default function Examens({ token, dmeId, consultationId }) {
         if (!raw) return [];
         const json = JSON.parse(raw);
         if (Array.isArray(json)) return json;
-        if (json && Array.isArray(json.data)) return json.data; // si pagination
+        if (json && Array.isArray(json.data)) return json.data;
         return [];
       };
 
@@ -94,7 +122,7 @@ export default function Examens({ token, dmeId, consultationId }) {
         dme_id: Number(dmeId),
         consultation_id: consultationId ? Number(consultationId) : null,
         type_examen_id: Number(form.type_examen_id),
-        date_examen: form.date_examen || null, // backend accepte nullable selon migration (mais controller valide required)
+        date_examen: form.date_examen || null,
         etat: form.etat || "en_attente",
         resultat: form.resultat?.trim() ? form.resultat.trim() : null,
         remarques: form.remarques?.trim() ? form.remarques.trim() : null,
@@ -112,14 +140,8 @@ export default function Examens({ token, dmeId, consultationId }) {
       const txt = await res.text();
       if (!res.ok) {
         console.error("add examen error:", res.status, txt);
-
-        // ⚠️ ton controller exige date_examen REQUIRED
-        // donc si vide, ça va échouer => message clair
-        if (res.status === 422) {
-          setError("Veuillez remplir la date de l’examen.");
-        } else {
-          setError("Erreur lors de l’ajout de l’examen.");
-        }
+        if (res.status === 422) setError("Veuillez remplir la date de l’examen.");
+        else setError("Erreur lors de l’ajout de l’examen.");
         return;
       }
 
@@ -171,7 +193,71 @@ export default function Examens({ token, dmeId, consultationId }) {
 
   const formatDate = (d) => {
     if (!d) return "—";
-    return String(d).replace("T", " ").slice(0, 16); // yyyy-mm-dd hh:mm
+    return String(d).replace("T", " ").slice(0, 16);
+  };
+
+  // ✅ IMPRESSION d'un examen (fiche simple)
+  const printExamen = (it) => {
+    if (!it) return;
+
+    const titre =
+      it?.type?.libelle
+        ? it.type.code
+          ? `${it.type.code} — ${it.type.libelle}`
+          : it.type.libelle
+        : "Examen";
+
+    const html = `
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>${titre}</title>
+          <style>
+            @page { size: A4; margin: 12mm; }
+            body { font-family: Arial, sans-serif; color:#111827; }
+            .card { border:1px solid #e5e7eb; border-radius:12px; padding:16px; }
+            h1 { font-size:16px; margin:0 0 10px; }
+            .row { margin:6px 0; font-size:13px; }
+            .label { color:#6b7280; font-weight:700; width:120px; display:inline-block; }
+            .value { font-weight:600; }
+            .muted { color:#6b7280; font-weight:500; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <h1>${titre}</h1>
+
+            <div class="row"><span class="label">Date</span><span class="value">${formatDate(it.date_examen)}</span></div>
+            <div class="row"><span class="label">État</span><span class="value">${it.etat || "—"}</span></div>
+
+            <div class="row"><span class="label">Résultat</span>
+              <span class="value">${it.resultat ? it.resultat : "<span class='muted'>—</span>"}</span>
+            </div>
+
+            <div class="row"><span class="label">Remarques</span>
+              <span class="value">${it.remarques ? it.remarques : "<span class='muted'>—</span>"}</span>
+            </div>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              window.onafterprint = function(){ window.close(); };
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    const w = window.open("", "_blank", "width=900,height=700");
+    if (!w) {
+      setError("Pop-up bloqué. Autorisez les pop-ups pour imprimer.");
+      return;
+    }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
   };
 
   return (
@@ -194,22 +280,14 @@ export default function Examens({ token, dmeId, consultationId }) {
               padding: 14,
             }}
           >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 12,
-              }}
-            >
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div className="form-group">
                 <label className="form-label">Type d’examen</label>
                 <select
                   className="custom-input"
                   style={{ width: "96%", padding: 10 }}
                   value={form.type_examen_id}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, type_examen_id: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, type_examen_id: e.target.value }))}
                 >
                   <option value="">-- Choisir --</option>
                   {types.map((t) => (
@@ -225,9 +303,7 @@ export default function Examens({ token, dmeId, consultationId }) {
                 <Input
                   type="datetime-local"
                   value={form.date_examen}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, date_examen: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, date_examen: e.target.value }))}
                 />
               </div>
 
@@ -237,9 +313,7 @@ export default function Examens({ token, dmeId, consultationId }) {
                   className="custom-input"
                   style={{ width: "100%", padding: 10 }}
                   value={form.etat}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, etat: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, etat: e.target.value }))}
                 >
                   {ETATS.map((x) => (
                     <option key={x.value} value={x.value}>
@@ -251,11 +325,11 @@ export default function Examens({ token, dmeId, consultationId }) {
 
               <div className="form-group">
                 <label className="form-label">Résultat</label>
-               <Input
-                    value={form.resultat}
-                    disabled={form.etat !== "en_attente"}
-                    onChange={(e) => setForm((f) => ({ ...f, resultat: e.target.value }))}
-                    />
+                <Input
+                  value={form.resultat}
+                  disabled={form.etat !== "en_attente"}
+                  onChange={(e) => setForm((f) => ({ ...f, resultat: e.target.value }))}
+                />
               </div>
 
               <div className="form-group" style={{ gridColumn: "1 / span 2" }}>
@@ -264,20 +338,12 @@ export default function Examens({ token, dmeId, consultationId }) {
                   className="custom-input"
                   style={{ minHeight: 80, padding: 10, width: "96%" }}
                   value={form.remarques}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, remarques: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, remarques: e.target.value }))}
                 />
               </div>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: 12,
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
               <button
                 type="button"
                 disabled={saving || !canSubmit}
@@ -300,16 +366,12 @@ export default function Examens({ token, dmeId, consultationId }) {
 
           {/* Liste */}
           <div style={{ marginTop: 14 }}>
-            <div style={{ fontWeight: 900, marginBottom: 10 }}>
-              Examens enregistrés
-            </div>
+            <div style={{ fontWeight: 900, marginBottom: 10 }}>Examens enregistrés</div>
 
             {items.length === 0 ? (
               <div style={{ color: "#6b7280" }}>Aucun examen.</div>
             ) : (
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 10 }}
-              >
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {items.map((it) => (
                   <div
                     key={it.id}
@@ -354,25 +416,43 @@ export default function Examens({ token, dmeId, consultationId }) {
                       ) : null}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => remove(it.id)}
-                      disabled={deletingId === it.id}
-                      style={{
-                        background: "#fee2e2",
-                        color: "#991b1b",
-                        border: "none",
-                        borderRadius: 10,
-                        padding: "8px 12px",
-                        cursor:
-                          deletingId === it.id ? "not-allowed" : "pointer",
-                        fontWeight: 800,
-                        opacity: deletingId === it.id ? 0.7 : 1,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {deletingId === it.id ? "Supp..." : "Supprimer"}
-                    </button>
+                    {/* ✅ actions: print + delete */}
+                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                      <button
+                        type="button"
+                        onClick={() => printExamen(it)}
+                        title="Imprimer examen"
+                        aria-label="Imprimer examen"
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          padding: 0,
+                          cursor: "pointer",
+                          lineHeight: 0,
+                        }}
+                      >
+                        {PrintIcon}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => remove(it.id)}
+                        disabled={deletingId === it.id}
+                        style={{
+                          background: "#fee2e2",
+                          color: "#991b1b",
+                          border: "none",
+                          borderRadius: 10,
+                          padding: "8px 12px",
+                          cursor: deletingId === it.id ? "not-allowed" : "pointer",
+                          fontWeight: 800,
+                          opacity: deletingId === it.id ? 0.7 : 1,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {deletingId === it.id ? "Supp..." : "Supprimer"}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

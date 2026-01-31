@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+// ConsultationForm.jsx
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import { useAuth } from "../context/AuthContext";
@@ -12,13 +13,53 @@ import Examens from "./Examens";
 import Analyses from "./Analyses";
 import Ordonnance from "./Ordonnance";
 
-function computeImc(poids, tailleCm) {
-  const p = Number(poids);
-  const t = Number(tailleCm);
+const toNumberOrNull = (v) => {
+  if (v === "" || v === null || v === undefined) return null;
+  const s = String(v).trim().replace(",", "."); // ✅ virgule -> point
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+};
+
+function computeImc(poids, tailleInput) {
+  const p = toNumberOrNull(poids);
+  let t = toNumberOrNull(tailleInput);
+
   if (!p || !t) return "";
+
+  // ✅ si la taille ressemble à des mètres (1.70), convertir en cm
+  if (t > 0 && t < 3) t = t * 100;
+
   const m = t / 100;
   if (m <= 0) return "";
   return (p / (m * m)).toFixed(2);
+}
+
+function computeAgeYears(dateNaissance) {
+  if (!dateNaissance) return null;
+  const dob = new Date(dateNaissance);
+  if (Number.isNaN(dob.getTime())) return null;
+
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const m = now.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
+  return age;
+}
+
+function debounce(fn, delay = 700) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), delay);
+  };
+}
+
+function riskUi(level) {
+  if (level === "critique")
+    return { label: "Risque: Critique", bg: "#ef4444", fg: "#fff" };
+  if (level === "surveillance")
+    return { label: "Risque: Surveillance", bg: "#f59e0b", fg: "#111" };
+  return { label: "Risque: Stable", bg: "#10b981", fg: "#fff" };
 }
 
 export default function ConsultationForm() {
@@ -26,11 +67,22 @@ export default function ConsultationForm() {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const [aiLive, setAiLive] = useState({
+    loading: false,
+    risk_level: "stable",
+    risk_score: 0,
+    alerts: [],
+    checklist: [],
+    error: "",
+  });
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [consult, setConsult] = useState(null);
   const [activeTab, setActiveTab] = useState("consultation");
+
+  const [ageYears, setAgeYears] = useState(null);
 
   const [form, setForm] = useState({
     motif: "",
@@ -73,13 +125,78 @@ export default function ConsultationForm() {
     }
 
     for (const k of requiredNumber) {
-      if (data[k] === "" || data[k] === null || Number.isNaN(Number(data[k]))) {
-        e[k] = "Champ obligatoire";
-      }
+      const n = toNumberOrNull(data[k]);
+      if (n === null) e[k] = "Champ obligatoire";
     }
 
     return e;
   }, []);
+
+  // ✅ évite les réponses qui arrivent dans le désordre (optionnel mais propre)
+  const abortRef = useRef(null);
+
+  const runAiPreview = useMemo(
+    () =>
+      debounce(async (nextForm, ageOverride = null) => {
+        if (!token || !id) return;
+
+        const ageToSend =
+          typeof ageOverride === "number" ? ageOverride : ageYears;
+
+        try {
+          setAiLive((s) => ({ ...s, loading: true, error: "" }));
+
+          if (abortRef.current) abortRef.current.abort();
+          const controller = new AbortController();
+          abortRef.current = controller;
+
+          const res = await fetch(
+            "http://127.0.0.1:8000/api/ai/preview/consultation",
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              signal: controller.signal,
+              body: JSON.stringify({
+                consultation_id: Number(id),
+                age_years: ageToSend,
+
+                temperature: toNumberOrNull(nextForm.temperature),
+                frequence_cardiaque: toNumberOrNull(nextForm.frequence_cardiaque),
+                pression_arterielle:
+                  String(nextForm.pression_arterielle || "").trim() || null,
+
+                poids: toNumberOrNull(nextForm.poids),
+                taille: toNumberOrNull(nextForm.taille),
+              }),
+            }
+          );
+
+          const data = await res.json();
+          setAiLive({
+            loading: false,
+            risk_level: data.risk_level ?? "stable",
+            risk_score: data.risk_score ?? 0,
+            alerts: data.alerts ?? [],
+            checklist: data.checklist ?? [],
+            error: data.error ?? "",
+          });
+        } catch (e) {
+          if (e.name === "AbortError") return;
+          setAiLive({
+            loading: false,
+            risk_level: "stable",
+            risk_score: 0,
+            alerts: [],
+            checklist: [],
+            error: "IA indisponible",
+          });
+        }
+      }, 700),
+    [token, id, ageYears]
+  );
 
   const load = useCallback(async () => {
     try {
@@ -100,6 +217,16 @@ export default function ConsultationForm() {
       const data = txt ? JSON.parse(txt) : null;
       setConsult(data);
 
+      const dob =
+        data?.patient?.user?.date_naissance ||
+        data?.dme?.patient?.user?.date_naissance ||
+        data?.patient?.date_naissance ||
+        data?.dme?.patient?.date_naissance ||
+        null;
+
+      const computedAge = computeAgeYears(dob);
+      setAgeYears(computedAge);
+
       const next = {
         motif: data?.motif ?? "",
         diagnostic: data?.diagnostic ?? "",
@@ -115,6 +242,9 @@ export default function ConsultationForm() {
       if (!next.imc) next.imc = computeImc(next.poids, next.taille);
 
       setForm(next);
+
+      runAiPreview(next, computedAge);
+
       setSubmitAttempted(false);
       setErrors({});
     } catch (e) {
@@ -123,7 +253,7 @@ export default function ConsultationForm() {
     } finally {
       setLoading(false);
     }
-  }, [id, token]);
+  }, [id, token, runAiPreview]);
 
   useEffect(() => {
     if (!token) return;
@@ -140,6 +270,18 @@ export default function ConsultationForm() {
 
       if (submitAttempted) {
         setErrors(validate(next));
+      }
+
+      const vitalKeys = new Set([
+        "poids",
+        "taille",
+        "temperature",
+        "frequence_cardiaque",
+        "pression_arterielle",
+      ]);
+
+      if (vitalKeys.has(k)) {
+        runAiPreview(next, ageYears);
       }
 
       return next;
@@ -169,13 +311,15 @@ export default function ConsultationForm() {
         motif: form.motif.trim(),
         diagnostic: form.diagnostic.trim(),
         traitement: form.traitement.trim(),
-        poids: Number(form.poids),
-        taille: Number(form.taille),
-        temperature: Number(form.temperature),
-        frequence_cardiaque: Number(form.frequence_cardiaque),
+        poids: toNumberOrNull(form.poids),
+        taille: toNumberOrNull(form.taille),
+        temperature: toNumberOrNull(form.temperature),
+        frequence_cardiaque: toNumberOrNull(form.frequence_cardiaque),
         pression_arterielle: form.pression_arterielle.trim(),
         finish,
       };
+
+      console.log("[AI payload sent to Laravel]", payload);
 
       const res = await fetch(`http://127.0.0.1:8000/api/consultations/${id}`, {
         method: "PUT",
@@ -224,13 +368,6 @@ export default function ConsultationForm() {
     }
   };
 
-  const Err = ({ name }) =>
-    submitAttempted && errors[name] ? (
-      <div style={{ color: "red", fontSize: 12, marginTop: 4 }}>
-        {errors[name]}
-      </div>
-    ) : null;
-
   return (
     <Layout>
       <h2>Consultation</h2>
@@ -246,13 +383,7 @@ export default function ConsultationForm() {
 
       {!loading && consult && (
         <div style={{ display: "flex", gap: 16, flexDirection: "column" }}>
-          {/* Cards gauche (patient + constantes vitales) déjà chez toi */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "flex-start" }}>
             <div style={{ flexShrink: 0, minWidth: 320 }}>
               <PatientMiniCard
                 variant="patient"
@@ -260,6 +391,7 @@ export default function ConsultationForm() {
                 dme={consult?.dme}
                 title="Informations Patient"
               />
+
               <div style={{ marginTop: 12 }}>
                 <PatientMiniCard
                   variant="vitals"
@@ -272,7 +404,105 @@ export default function ConsultationForm() {
               </div>
             </div>
 
-            {/* ✅ colonne droite => Tabs */}
+            <div
+              style={{
+                marginTop: 12,
+                padding: 12,
+                border: "1px solid #eee",
+                borderRadius: 12,
+                minWidth: 260,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <strong>IA Live</strong>
+                {aiLive.loading && <span style={{ fontSize: 12 }}>Analyse…</span>}
+              </div>
+
+              {(() => {
+                const ui = riskUi(aiLive.risk_level);
+                return (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      display: "inline-block",
+                      padding: "6px 10px",
+                      borderRadius: 999,
+                      background: ui.bg,
+                      color: ui.fg,
+                      fontWeight: 800,
+                      fontSize: 12,
+                    }}
+                  >
+                    {ui.label} (score {aiLive.risk_score})
+                  </div>
+                );
+              })()}
+
+              <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
+                Âge: {ageYears ?? "—"}
+              </div>
+
+              {aiLive.error && (
+                <div style={{ marginTop: 8, color: "red" }}>{aiLive.error}</div>
+              )}
+
+              <div style={{ marginTop: 10 }}>
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>Alertes</div>
+
+                {aiLive.alerts.length === 0 ? (
+                  <div style={{ fontSize: 13 }}>Aucune alerte détectée.</div>
+                ) : (
+                  aiLive.alerts.map((a, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        marginTop: 8,
+                        padding: 10,
+                        border: "1px solid #f1f1f1",
+                        borderRadius: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <strong>{a.title}</strong>
+                        <span style={{ fontWeight: 800, fontSize: 12 }}>
+                          S{a.severity}/5
+                        </span>
+                      </div>
+                      <div style={{ marginTop: 6, fontSize: 13 }}>
+                        {a.explanation}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>À vérifier</div>
+                {aiLive.checklist.length === 0 ? (
+                  <div style={{ fontSize: 13 }}>—</div>
+                ) : (
+                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
+                    {aiLive.checklist.map((it, i) => (
+                      <li key={i} style={{ marginBottom: 6 }}>
+                        {it}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
             <div style={{ flex: 2, minWidth: 520 }}>
               <Tabs
                 activeKey={activeTab}
@@ -283,11 +513,7 @@ export default function ConsultationForm() {
                     label: "Consultation",
                     content: (
                       <>
-                        {/* ✅ contenu “Consultation” = TON formulaire actuel */}
-                        <div
-                          className="form-group"
-                          style={{ marginBottom: 12 }}
-                        >
+                        <div className="form-group" style={{ marginBottom: 12 }}>
                           <label className="form-label">Motif</label>
                           <Input
                             value={form.motif}
@@ -295,37 +521,26 @@ export default function ConsultationForm() {
                           />
                         </div>
 
-                        <div
-                          className="form-group"
-                          style={{ marginBottom: 12 }}
-                        >
+                        <div className="form-group" style={{ marginBottom: 12 }}>
                           <label className="form-label">Diagnostic</label>
                           <textarea
                             className="custom-input"
                             style={{ minHeight: 90, padding: 10 }}
                             value={form.diagnostic}
-                            onChange={(e) =>
-                              setField("diagnostic", e.target.value)
-                            }
+                            onChange={(e) => setField("diagnostic", e.target.value)}
                           />
                         </div>
 
-                        <div
-                          className="form-group"
-                          style={{ marginBottom: 12 }}
-                        >
+                        <div className="form-group" style={{ marginBottom: 12 }}>
                           <label className="form-label">Traitement</label>
                           <textarea
                             className="custom-input"
                             style={{ minHeight: 90, padding: 10 }}
                             value={form.traitement}
-                            onChange={(e) =>
-                              setField("traitement", e.target.value)
-                            }
+                            onChange={(e) => setField("traitement", e.target.value)}
                           />
                         </div>
 
-                        {/* Buttons save */}
                         <div
                           style={{
                             display: "flex",
@@ -385,7 +600,6 @@ export default function ConsultationForm() {
                       </>
                     ),
                   },
-
                   {
                     key: "antecedents",
                     label: "Antécédents",
@@ -427,18 +641,14 @@ export default function ConsultationForm() {
                         token={token}
                         consultationId={id}
                         patient={consult?.dme?.patient || consult?.patient}
-                        medecin={consult?.medecin} // doit être Medecin::with('user')
+                        medecin={consult?.medecin}
                       />
                     ),
                   },
                   {
                     key: "certificat",
                     label: "Certificat",
-                    content: (
-                      <div>
-                        TODO: certificat (texte + génération PDF plus tard)
-                      </div>
-                    ),
+                    content: <div>TODO: certificat (texte + génération PDF plus tard)</div>,
                   },
                 ]}
               />

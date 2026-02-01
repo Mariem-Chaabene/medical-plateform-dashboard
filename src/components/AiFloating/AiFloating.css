@@ -1,0 +1,115 @@
+.aiFab {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  border: 1px solid rgba(2, 6, 23, 0.10);
+  background: #ffffff;
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.18);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  z-index: 9999;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.aiFab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 55px rgba(2, 6, 23, 0.22);
+}
+
+.aiFabIcon {
+  font-size: 22px;
+}
+
+.aiFabBadge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 12px;
+  border: 1px solid rgba(2, 6, 23, 0.10);
+  background: #fff7ed;
+  color: #7c2d12;
+}
+
+/* Tone (optionnel) */
+.aiFab-warn .aiFabBadge {
+  background: #fff7ed;
+  color: #7c2d12;
+}
+.aiFab-danger .aiFabBadge {
+  background: #fef2f2;
+  color: #7f1d1d;
+}
+
+/* Drawer */
+.aiDrawerRoot {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+}
+
+.aiOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.45);
+}
+
+.aiDrawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: min(420px, 92vw);
+  background: #ffffff;
+  border-left: 1px solid rgba(2, 6, 23, 0.10);
+  box-shadow: -20px 0 60px rgba(2, 6, 23, 0.25);
+  display: flex;
+  flex-direction: column;
+  animation: slideIn .18s ease-out;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(18px); opacity: .6; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.aiDrawerTop {
+  padding: 14px 14px;
+  border-bottom: 1px solid rgba(2, 6, 23, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.aiDrawerTitle {
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.aiClose {
+  border: 1px solid rgba(2, 6, 23, 0.10);
+  background: #fff;
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.aiDrawerBody {
+  padding: 14px;
+  overflow: auto;
+}
+
+/* IMPORTANT: AiLiveCard a déjà position: sticky
+   Dans un drawer on ne veut pas sticky -> on neutralise */
+.aiDrawerBody .aiCard {
+  position: static !important;
+  top: auto !important;
+}

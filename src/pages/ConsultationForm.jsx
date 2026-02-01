@@ -13,6 +13,10 @@ import Examens from "./Examens";
 import Analyses from "./Analyses";
 import Ordonnance from "./Ordonnance";
 
+// ✅ Nouveau panneau IA pro (tu as déjà AiLiveCard.jsx + AiLiveCard.css)
+import AiLiveCard from "../components/AiLiveCard/AiLiveCard";
+import AiFloating from "../components/AiFloating/AiFloating";
+
 const toNumberOrNull = (v) => {
   if (v === "" || v === null || v === undefined) return null;
   const s = String(v).trim().replace(",", "."); // ✅ virgule -> point
@@ -54,24 +58,21 @@ function debounce(fn, delay = 700) {
   };
 }
 
-function riskUi(level) {
-  if (level === "critique")
-    return { label: "Risque: Critique", bg: "#ef4444", fg: "#fff" };
-  if (level === "surveillance")
-    return { label: "Risque: Surveillance", bg: "#f59e0b", fg: "#111" };
-  return { label: "Risque: Stable", bg: "#10b981", fg: "#fff" };
-}
-
 export default function ConsultationForm() {
   const { token } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
 
+  // ✅ IA state enrichi (design pro)
+  // - observations + metrics: utilisés par AiLiveCard
+  // - anti-flicker: pendant loading on garde le dernier résultat
   const [aiLive, setAiLive] = useState({
     loading: false,
     risk_level: "stable",
     risk_score: 0,
     alerts: [],
+    observations: [],
+    metrics: null,
     checklist: [],
     error: "",
   });
@@ -107,18 +108,8 @@ export default function ConsultationForm() {
 
   const validate = useCallback((data) => {
     const e = {};
-    const requiredText = [
-      "motif",
-      "diagnostic",
-      "traitement",
-      "pression_arterielle",
-    ];
-    const requiredNumber = [
-      "poids",
-      "taille",
-      "temperature",
-      "frequence_cardiaque",
-    ];
+    const requiredText = ["motif", "diagnostic", "traitement", "pression_arterielle"];
+    const requiredNumber = ["poids", "taille", "temperature", "frequence_cardiaque"];
 
     for (const k of requiredText) {
       if (!String(data[k] ?? "").trim()) e[k] = "Champ obligatoire";
@@ -132,7 +123,7 @@ export default function ConsultationForm() {
     return e;
   }, []);
 
-  // ✅ évite les réponses qui arrivent dans le désordre (optionnel mais propre)
+  // ✅ évite les réponses IA qui arrivent dans le désordre
   const abortRef = useRef(null);
 
   const runAiPreview = useMemo(
@@ -140,59 +131,59 @@ export default function ConsultationForm() {
       debounce(async (nextForm, ageOverride = null) => {
         if (!token || !id) return;
 
-        const ageToSend =
-          typeof ageOverride === "number" ? ageOverride : ageYears;
+        const ageToSend = typeof ageOverride === "number" ? ageOverride : ageYears;
 
         try {
-          setAiLive((s) => ({ ...s, loading: true, error: "" }));
+          // ✅ Pro touch #1: pas de flicker -> on garde le contenu, on met juste loading=true
+          setAiLive((prev) => ({ ...prev, loading: true, error: "" }));
 
           if (abortRef.current) abortRef.current.abort();
           const controller = new AbortController();
           abortRef.current = controller;
 
-          const res = await fetch(
-            "http://127.0.0.1:8000/api/ai/preview/consultation",
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-              signal: controller.signal,
-              body: JSON.stringify({
-                consultation_id: Number(id),
-                age_years: ageToSend,
+          const res = await fetch("http://127.0.0.1:8000/api/ai/preview/consultation", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            signal: controller.signal,
+            body: JSON.stringify({
+              consultation_id: Number(id),
+              age_years: ageToSend,
 
-                temperature: toNumberOrNull(nextForm.temperature),
-                frequence_cardiaque: toNumberOrNull(nextForm.frequence_cardiaque),
-                pression_arterielle:
-                  String(nextForm.pression_arterielle || "").trim() || null,
+              temperature: toNumberOrNull(nextForm.temperature),
+              frequence_cardiaque: toNumberOrNull(nextForm.frequence_cardiaque),
+              pression_arterielle: String(nextForm.pression_arterielle || "").trim() || null,
 
-                poids: toNumberOrNull(nextForm.poids),
-                taille: toNumberOrNull(nextForm.taille),
-              }),
-            }
-          );
+              poids: toNumberOrNull(nextForm.poids),
+              taille: toNumberOrNull(nextForm.taille),
+            }),
+          });
 
           const data = await res.json();
-          setAiLive({
+
+          setAiLive((prev) => ({
+            ...prev,
             loading: false,
             risk_level: data.risk_level ?? "stable",
             risk_score: data.risk_score ?? 0,
             alerts: data.alerts ?? [],
-            checklist: data.checklist ?? [],
+            observations: data.observations ?? [],
+            metrics: data.metrics ?? null,
+            // ✅ Pro touch #2: “À vérifier” uniquement si non vide (géré aussi dans AiLiveCard)
+            checklist: Array.isArray(data.checklist) ? data.checklist : [],
             error: data.error ?? "",
-          });
+          }));
         } catch (e) {
           if (e.name === "AbortError") return;
-          setAiLive({
+
+          // ✅ Pro touch #1 (suite): on ne vide pas l’UI, on garde l’ancien résultat + message
+          setAiLive((prev) => ({
+            ...prev,
             loading: false,
-            risk_level: "stable",
-            risk_score: 0,
-            alerts: [],
-            checklist: [],
             error: "IA indisponible",
-          });
+          }));
         }
       }, 700),
     [token, id, ageYears]
@@ -243,6 +234,7 @@ export default function ConsultationForm() {
 
       setForm(next);
 
+      // lance l’IA au chargement
       runAiPreview(next, computedAge);
 
       setSubmitAttempted(false);
@@ -383,7 +375,16 @@ export default function ConsultationForm() {
 
       {!loading && consult && (
         <div style={{ display: "flex", gap: 16, flexDirection: "column" }}>
-          <div style={{ display: "flex", alignItems: "flex-start" }}>
+          {/* ✅ Layout 3 colonnes: Patient + Form + IA */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 16,
+              flexWrap: "wrap", // responsive si écran petit
+            }}
+          >
+            {/* Colonne gauche */}
             <div style={{ flexShrink: 0, minWidth: 320 }}>
               <PatientMiniCard
                 variant="patient"
@@ -404,105 +405,7 @@ export default function ConsultationForm() {
               </div>
             </div>
 
-            <div
-              style={{
-                marginTop: 12,
-                padding: 12,
-                border: "1px solid #eee",
-                borderRadius: 12,
-                minWidth: 260,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <strong>IA Live</strong>
-                {aiLive.loading && <span style={{ fontSize: 12 }}>Analyse…</span>}
-              </div>
-
-              {(() => {
-                const ui = riskUi(aiLive.risk_level);
-                return (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      display: "inline-block",
-                      padding: "6px 10px",
-                      borderRadius: 999,
-                      background: ui.bg,
-                      color: ui.fg,
-                      fontWeight: 800,
-                      fontSize: 12,
-                    }}
-                  >
-                    {ui.label} (score {aiLive.risk_score})
-                  </div>
-                );
-              })()}
-
-              <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
-                Âge: {ageYears ?? "—"}
-              </div>
-
-              {aiLive.error && (
-                <div style={{ marginTop: 8, color: "red" }}>{aiLive.error}</div>
-              )}
-
-              <div style={{ marginTop: 10 }}>
-                <div style={{ fontWeight: 700, marginBottom: 6 }}>Alertes</div>
-
-                {aiLive.alerts.length === 0 ? (
-                  <div style={{ fontSize: 13 }}>Aucune alerte détectée.</div>
-                ) : (
-                  aiLive.alerts.map((a, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        marginTop: 8,
-                        padding: 10,
-                        border: "1px solid #f1f1f1",
-                        borderRadius: 10,
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <strong>{a.title}</strong>
-                        <span style={{ fontWeight: 800, fontSize: 12 }}>
-                          S{a.severity}/5
-                        </span>
-                      </div>
-                      <div style={{ marginTop: 6, fontSize: 13 }}>
-                        {a.explanation}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div style={{ marginTop: 12 }}>
-                <div style={{ fontWeight: 700, marginBottom: 6 }}>À vérifier</div>
-                {aiLive.checklist.length === 0 ? (
-                  <div style={{ fontSize: 13 }}>—</div>
-                ) : (
-                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
-                    {aiLive.checklist.map((it, i) => (
-                      <li key={i} style={{ marginBottom: 6 }}>
-                        {it}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-
+            {/* Colonne centre */}
             <div style={{ flex: 2, minWidth: 520 }}>
               <Tabs
                 activeKey={activeTab}
@@ -547,6 +450,7 @@ export default function ConsultationForm() {
                             justifyContent: "flex-end",
                             gap: 12,
                             marginTop: 14,
+                            flexWrap: "wrap",
                           }}
                         >
                           <button
@@ -663,6 +567,7 @@ export default function ConsultationForm() {
         message={toast.message}
         onClose={() => setToast({ ...toast, title: "", message: "" })}
       />
+      <AiFloating aiLive={aiLive} ageYears={ageYears} />
     </Layout>
   );
 }

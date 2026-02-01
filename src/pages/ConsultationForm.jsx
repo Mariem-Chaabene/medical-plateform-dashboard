@@ -13,13 +13,12 @@ import Examens from "./Examens";
 import Analyses from "./Analyses";
 import Ordonnance from "./Ordonnance";
 
-// ✅ Nouveau panneau IA pro (tu as déjà AiLiveCard.jsx + AiLiveCard.css)
-import AiLiveCard from "../components/AiLiveCard/AiLiveCard";
+// ✅ Bouton flottant IA (🤖 + drawer)
 import AiFloating from "../components/AiFloating/AiFloating";
 
 const toNumberOrNull = (v) => {
   if (v === "" || v === null || v === undefined) return null;
-  const s = String(v).trim().replace(",", "."); // ✅ virgule -> point
+  const s = String(v).trim().replace(",", ".");
   const n = Number(s);
   return Number.isFinite(n) ? n : null;
 };
@@ -27,12 +26,9 @@ const toNumberOrNull = (v) => {
 function computeImc(poids, tailleInput) {
   const p = toNumberOrNull(poids);
   let t = toNumberOrNull(tailleInput);
-
   if (!p || !t) return "";
 
-  // ✅ si la taille ressemble à des mètres (1.70), convertir en cm
   if (t > 0 && t < 3) t = t * 100;
-
   const m = t / 100;
   if (m <= 0) return "";
   return (p / (m * m)).toFixed(2);
@@ -58,14 +54,23 @@ function debounce(fn, delay = 700) {
   };
 }
 
+// ✅ petit helper pour éviter que snapshot IA bloque trop longtemps
+async function fetchWithTimeout(url, options = {}, timeoutMs = 3500) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 export default function ConsultationForm() {
   const { token } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // ✅ IA state enrichi (design pro)
-  // - observations + metrics: utilisés par AiLiveCard
-  // - anti-flicker: pendant loading on garde le dernier résultat
   const [aiLive, setAiLive] = useState({
     loading: false,
     risk_level: "stable",
@@ -108,8 +113,18 @@ export default function ConsultationForm() {
 
   const validate = useCallback((data) => {
     const e = {};
-    const requiredText = ["motif", "diagnostic", "traitement", "pression_arterielle"];
-    const requiredNumber = ["poids", "taille", "temperature", "frequence_cardiaque"];
+    const requiredText = [
+      "motif",
+      "diagnostic",
+      "traitement",
+      "pression_arterielle",
+    ];
+    const requiredNumber = [
+      "poids",
+      "taille",
+      "temperature",
+      "frequence_cardiaque",
+    ];
 
     for (const k of requiredText) {
       if (!String(data[k] ?? "").trim()) e[k] = "Champ obligatoire";
@@ -131,35 +146,39 @@ export default function ConsultationForm() {
       debounce(async (nextForm, ageOverride = null) => {
         if (!token || !id) return;
 
-        const ageToSend = typeof ageOverride === "number" ? ageOverride : ageYears;
+        const ageToSend =
+          typeof ageOverride === "number" ? ageOverride : ageYears;
 
         try {
-          // ✅ Pro touch #1: pas de flicker -> on garde le contenu, on met juste loading=true
           setAiLive((prev) => ({ ...prev, loading: true, error: "" }));
 
           if (abortRef.current) abortRef.current.abort();
           const controller = new AbortController();
           abortRef.current = controller;
 
-          const res = await fetch("http://127.0.0.1:8000/api/ai/preview/consultation", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            signal: controller.signal,
-            body: JSON.stringify({
-              consultation_id: Number(id),
-              age_years: ageToSend,
+          const res = await fetch(
+            "http://127.0.0.1:8000/api/ai/preview/consultation",
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              signal: controller.signal,
+              body: JSON.stringify({
+                consultation_id: Number(id),
+                age_years: ageToSend,
 
-              temperature: toNumberOrNull(nextForm.temperature),
-              frequence_cardiaque: toNumberOrNull(nextForm.frequence_cardiaque),
-              pression_arterielle: String(nextForm.pression_arterielle || "").trim() || null,
+                temperature: toNumberOrNull(nextForm.temperature),
+                frequence_cardiaque: toNumberOrNull(nextForm.frequence_cardiaque),
+                pression_arterielle:
+                  String(nextForm.pression_arterielle || "").trim() || null,
 
-              poids: toNumberOrNull(nextForm.poids),
-              taille: toNumberOrNull(nextForm.taille),
-            }),
-          });
+                poids: toNumberOrNull(nextForm.poids),
+                taille: toNumberOrNull(nextForm.taille),
+              }),
+            }
+          );
 
           const data = await res.json();
 
@@ -171,14 +190,11 @@ export default function ConsultationForm() {
             alerts: data.alerts ?? [],
             observations: data.observations ?? [],
             metrics: data.metrics ?? null,
-            // ✅ Pro touch #2: “À vérifier” uniquement si non vide (géré aussi dans AiLiveCard)
             checklist: Array.isArray(data.checklist) ? data.checklist : [],
             error: data.error ?? "",
           }));
         } catch (e) {
           if (e.name === "AbortError") return;
-
-          // ✅ Pro touch #1 (suite): on ne vide pas l’UI, on garde l’ancien résultat + message
           setAiLive((prev) => ({
             ...prev,
             loading: false,
@@ -194,9 +210,12 @@ export default function ConsultationForm() {
       setLoading(true);
       setError("");
 
-      const res = await fetch(`http://127.0.0.1:8000/api/consultations/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/consultations/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       const txt = await res.text();
       if (!res.ok) {
@@ -233,8 +252,6 @@ export default function ConsultationForm() {
       if (!next.imc) next.imc = computeImc(next.poids, next.taille);
 
       setForm(next);
-
-      // lance l’IA au chargement
       runAiPreview(next, computedAge);
 
       setSubmitAttempted(false);
@@ -280,6 +297,44 @@ export default function ConsultationForm() {
     });
   };
 
+  // ✅ Enregistrer snapshot IA (historique) — appelé seulement après un PUT réussi
+  const saveAiSnapshot = useCallback(
+    async (source) => {
+      if (!token || !id) return;
+
+      try {
+        await fetchWithTimeout(
+          "http://127.0.0.1:8000/api/ai/snapshot/consultation",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              consultation_id: Number(id),
+              age_years: typeof ageYears === "number" ? ageYears : null,
+
+              temperature: toNumberOrNull(form.temperature),
+              frequence_cardiaque: toNumberOrNull(form.frequence_cardiaque),
+              pression_arterielle: String(form.pression_arterielle || "").trim() || null,
+
+              poids: toNumberOrNull(form.poids),
+              taille: toNumberOrNull(form.taille),
+
+              source, // "save" | "finish"
+            }),
+          },
+          3500
+        );
+      } catch (e) {
+        // ✅ Pro: ne pas bloquer la sauvegarde consultation si snapshot IA échoue
+        console.warn("Snapshot IA non enregistré:", e);
+      }
+    },
+    [token, id, ageYears, form]
+  );
+
   const save = async (finish = false) => {
     setSubmitAttempted(true);
 
@@ -311,16 +366,17 @@ export default function ConsultationForm() {
         finish,
       };
 
-      console.log("[AI payload sent to Laravel]", payload);
-
-      const res = await fetch(`http://127.0.0.1:8000/api/consultations/${id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/consultations/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
       const txt = await res.text();
       if (!res.ok) {
@@ -333,6 +389,9 @@ export default function ConsultationForm() {
         });
         return;
       }
+
+      // ✅ Snapshot IA (historique) — après sauvegarde OK
+      await saveAiSnapshot(finish ? "finish" : "save");
 
       setToast({
         type: "success",
@@ -375,16 +434,14 @@ export default function ConsultationForm() {
 
       {!loading && consult && (
         <div style={{ display: "flex", gap: 16, flexDirection: "column" }}>
-          {/* ✅ Layout 3 colonnes: Patient + Form + IA */}
           <div
             style={{
               display: "flex",
               alignItems: "flex-start",
               gap: 16,
-              flexWrap: "wrap", // responsive si écran petit
+              flexWrap: "wrap",
             }}
           >
-            {/* Colonne gauche */}
             <div style={{ flexShrink: 0, minWidth: 320 }}>
               <PatientMiniCard
                 variant="patient"
@@ -405,7 +462,6 @@ export default function ConsultationForm() {
               </div>
             </div>
 
-            {/* Colonne centre */}
             <div style={{ flex: 2, minWidth: 520 }}>
               <Tabs
                 activeKey={activeTab}
@@ -552,7 +608,9 @@ export default function ConsultationForm() {
                   {
                     key: "certificat",
                     label: "Certificat",
-                    content: <div>TODO: certificat (texte + génération PDF plus tard)</div>,
+                    content: (
+                      <div>TODO: certificat (texte + génération PDF plus tard)</div>
+                    ),
                   },
                 ]}
               />
@@ -567,6 +625,8 @@ export default function ConsultationForm() {
         message={toast.message}
         onClose={() => setToast({ ...toast, title: "", message: "" })}
       />
+
+      {/* ✅ IA Floating (🤖 + badge + drawer) */}
       <AiFloating aiLive={aiLive} ageYears={ageYears} />
     </Layout>
   );

@@ -20,6 +20,11 @@ import Roles from "./pages/Roles";
 import RoleCreate from "./pages/RoleCreate";
 import RoleShow from "./pages/RoleShow";
 import RoleEdit from "./pages/RoleEdit";
+import TypeAnalyses from "./pages/TypeAnalyses";
+import TypeAnalyseCreate from "./pages/TypeAnalyseCreate";
+import TypeAnalyseShow from "./pages/TypeAnalyseShow";
+import TypeAnalyseEdit from "./pages/TypeAnalyseEdit";
+
 function App() {
   return (
     <BrowserRouter>
@@ -185,6 +190,41 @@ function App() {
             <ProtectedRoute>
               <RendezVous />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/type_analyses"
+          element={
+            <ProtectedRoute>
+              <TypeAnalyses />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/type_analyses/create"
+          element={
+            <PrivateRoute requiredRole="admin">
+              <TypeAnalyseCreate />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/type_analyses/:id"
+          element={
+            <ProtectedRoute>
+              <TypeAnalyseShow />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/type_analyses/:id/edit"
+          element={
+            <PrivateRoute requiredRole="admin">
+              <TypeAnalyseEdit />
+            </PrivateRoute>
           }
         />
 

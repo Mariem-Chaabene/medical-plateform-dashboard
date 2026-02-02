@@ -10,9 +10,9 @@ const MENU_CONFIG = {
       type: "group",
       label: "Paramétrages",
       children: [
-        { label: "Type Analyses", path: "/type-analyses" },
-        { label: "Type Examens", path: "/type-examens" },
-        { label: "Type Antécédents", path: "/type-antecedents" },
+        { label: "Type Analyses", path: "/type_analyses" },
+        { label: "Type Examens", path: "/type_examens" },
+        { label: "Type Antécédents", path: "/type_antecedents" },
       ],
     },
   ],

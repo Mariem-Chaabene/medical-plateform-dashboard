@@ -9,7 +9,6 @@ export default function CreatePatient() {
   const { token } = useAuth();
   const navigate = useNavigate();
 
-  // Champs de base pour le patient
   const [values, setValues] = useState({
     name: "",
     surname: "",
@@ -20,7 +19,6 @@ export default function CreatePatient() {
     adresse: "",
     antecedents: "",
     password: "",
-    // Optionnel: avatar, etc.
   });
 
   const sexes = ["homme", "femme"];
@@ -29,7 +27,6 @@ export default function CreatePatient() {
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
-  // Champs du formulaire
   const fields = [
     { name: "name", label: "Nom", type: "text", placeholder: "Nom" },
     { name: "surname", label: "Prénom", type: "text", placeholder: "Prénom" },
@@ -40,10 +37,8 @@ export default function CreatePatient() {
     { name: "adresse", label: "Adresse", type: "text", placeholder: "Adresse" },
     { name: "antecedents", label: "Antécédents", type: "text", placeholder: "Antécédents médicaux" },
     { name: "password", label: "Mot de passe", type: "password", placeholder: "Mot de passe" },
-    // Ajoute plus de champs si besoin
   ];
 
-  // Organisation des rows
   const fieldRows = [];
   for (let i = 0; i < fields.length; i += 2) fieldRows.push(fields.slice(i, i + 2));
 
@@ -51,10 +46,8 @@ export default function CreatePatient() {
     setValues((v) => ({ ...v, [name]: value }));
   };
 
-  // Validation simple, à compléter selon ton besoin
   const validateForm = () => {
     const newErrors = {};
-    // Champs obligatoires
     ["name", "surname", "email", "sexe", "date_naissance", "adresse", "password"].forEach((f) => {
       if (!values[f]) newErrors[f] = "Ce champ est obligatoire";
     });
@@ -66,34 +59,61 @@ export default function CreatePatient() {
     setApiErrors({});
     setSuccess("");
     setError("");
+
     if (!validateForm()) return;
 
-    // Envoi vers l'API Laravel (vérifie si tu as bien un endpoint /api/patients)
-    const res = await fetch("http://127.0.0.1:8000/api/patients", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(values),
-    });
-    if (res.ok) {
-      setSuccess("Patient créé !");
-      setTimeout(() => navigate("/patients"), 1250);
-    } else {
-      setError("Erreur lors de la création");
-      try {
-        const err = await res.json();
-        setApiErrors(err.errors ?? {});
-      } catch {}
+    // ✅ DEBUG : data avant envoi
+    console.log("=== CREATE PATIENT SUBMIT ===");
+    console.log("Token présent ?", !!token);
+    console.log("Payload (values):", values);
+    console.log("Payload JSON:", JSON.stringify(values, null, 2));
+
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/patients", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(values),
+      });
+
+      // ✅ DEBUG : status + headers
+      console.log("Response status:", res.status, res.statusText);
+      console.log("Response ok:", res.ok);
+
+      // ✅ DEBUG : lire le body quoi qu'il arrive
+      const contentType = res.headers.get("content-type") || "";
+      let body;
+      if (contentType.includes("application/json")) {
+        body = await res.json();
+      } else {
+        body = await res.text();
+      }
+      console.log("Response body:", body);
+
+      if (res.ok) {
+        setSuccess("Patient créé !");
+        setTimeout(() => navigate("/patients"), 1250);
+      } else {
+        // Laravel 422/403/etc
+        setError(body?.message || "Erreur lors de la création");
+        setApiErrors(body?.errors ?? {});
+      }
+    } catch (e) {
+      console.error("Fetch error:", e);
+      setError("Erreur réseau (backend inaccessible / CORS / token)");
     }
   };
 
   return (
     <Layout>
       <h2>Ajouter un patient</h2>
+
       {error && <div style={{ color: "red" }}>{error}</div>}
       {success && <div style={{ color: "green" }}>{success}</div>}
+
       <form
         className="dynamic-form"
         onSubmit={(e) => {
@@ -108,6 +128,7 @@ export default function CreatePatient() {
                 <label htmlFor={field.name} className="form-label">
                   {field.label}
                 </label>
+
                 {field.type === "select" ? (
                   <select
                     className="custom-input"
@@ -138,13 +159,13 @@ export default function CreatePatient() {
                     placeholder={field.placeholder || ""}
                   />
                 )}
-                {apiErrors[field.name] && (
-                  <div className="form-error">{apiErrors[field.name]}</div>
-                )}
+
+                {apiErrors[field.name] && <div className="form-error">{apiErrors[field.name]}</div>}
               </div>
             ))}
           </div>
         ))}
+
         <button type="submit" className="form-btn">
           Sauvegarder
         </button>

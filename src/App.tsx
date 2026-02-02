@@ -16,7 +16,10 @@ import SalleAttente from "./pages/SalleAttente";
 import RendezVous from "./pages/RendezVous";
 import MedecinDashboard from "./pages/MedecinDashboard";
 import ConsultationForm from "./pages/ConsultationForm";
-
+import Roles from "./pages/Roles";
+import RoleCreate from "./pages/RoleCreate";
+import RoleShow from "./pages/RoleShow";
+import RoleEdit from "./pages/RoleEdit";
 function App() {
   return (
     <BrowserRouter>
@@ -40,6 +43,14 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route
+          path="/roles"
+          element={
+            <PrivateRoute requiredRole="admin">
+              <Roles />
+            </PrivateRoute>
+          }
+        />
 
         <Route
           path="/users/create"
@@ -56,6 +67,41 @@ function App() {
             <ProtectedRoute>
               <UserDetail />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/roles"
+          element={
+            <PrivateRoute requiredRole="admin">
+              <Roles />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/roles/create"
+          element={
+            <PrivateRoute requiredRole="admin">
+              <RoleCreate />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/roles/:id"
+          element={
+            <PrivateRoute requiredRole="admin">
+              <RoleShow />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/roles/:id/edit"
+          element={
+            <PrivateRoute requiredRole="admin">
+              <RoleEdit />
+            </PrivateRoute>
           }
         />
 

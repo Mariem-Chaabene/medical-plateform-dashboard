@@ -73,3 +73,59 @@
     display: none;
   }
 }
+
+
+/* --- GROUP / SUBMENU --- */
+.sidebar__group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar__groupLabel {
+  color: #222;
+  font-size: 16px;
+  padding: 9px 0;
+  border-radius: 6px;
+  cursor: default;          /* pas cliquable */
+  user-select: none;
+  transition: background .15s;
+}
+
+/* même style hover que les liens */
+.sidebar__group:hover .sidebar__groupLabel {
+  background: #48c6ef22;
+  color: #48c6ef;
+  font-weight: bold;
+  padding-left: 15px;
+}
+
+/* sous-menu caché par défaut */
+.sidebar__submenu {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  margin-left: 15px;     /* indentation */
+  margin-top: 6px;
+}
+
+/* apparaît uniquement au hover du parent */
+.sidebar__group:hover .sidebar__submenu {
+  display: flex;
+}
+
+.sidebar__sublink {
+  color: #222;
+  text-decoration: none;
+  font-size: 15px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  transition: background .15s;
+}
+
+.sidebar__sublink:hover,
+.sidebar__sublink.active {
+  background: #48c6ef22;
+  color: #48c6ef;
+  font-weight: bold;
+}

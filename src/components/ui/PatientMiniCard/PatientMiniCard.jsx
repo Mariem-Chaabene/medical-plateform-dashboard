@@ -13,6 +13,8 @@ function calcAge(dateNaissance) {
   return age;
 }
 
+const GROUPES_SANGUINS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+
 export default function PatientMiniCard({
   variant = "patient",
   title,
@@ -31,10 +33,12 @@ export default function PatientMiniCard({
 
   const groupeSanguin =
     dme?.groupe_sanguin || patient?.dme?.groupe_sanguin || "—";
+
   // ✅ helpers pour affichage erreurs
   const fieldStyle = (name) => ({
     border: submitAttempted && errors[name] ? "1px solid #ef4444" : undefined,
   });
+
   const Err = ({ name }) =>
     submitAttempted && errors[name] ? (
       <div style={{ color: "#ef4444", fontSize: 12, marginTop: 4 }}>
@@ -48,6 +52,23 @@ export default function PatientMiniCard({
         <div className="pmcCard__title">{title || "Constantes Vitales"}</div>
 
         <div className="pmcVitalsStack">
+          {/* ✅ NEW: Groupe sanguin dropdown */}
+          <div className="pmcField">
+            <label className="pmcLabel">Groupe sanguin</label>
+            <select
+              className="custom-input"
+              value={vitals?.groupe_sanguin ?? ""}
+              onChange={(e) => onChangeVital?.("groupe_sanguin", e.target.value)}
+            >
+              <option value="">-- Choisir --</option>
+              {GROUPES_SANGUINS.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="pmcField">
             <label className="pmcLabel">Poids (kg) *</label>
             <Input
@@ -136,13 +157,10 @@ export default function PatientMiniCard({
             <span className="pmcLabel">Âge</span>
             <span className="pmcValue">{age === "-" ? "-" : `${age} ans`}</span>
           </div>
+
           <div className="pmcInfoItem">
-            <span className="pmcLabel">
-              Groupe sanguin
-            </span>
-            <span className="pmcValue">
-              {groupeSanguin}
-            </span>
+            <span className="pmcLabel">Groupe sanguin</span>
+            <span className="pmcValue">{groupeSanguin}</span>
           </div>
         </div>
       </div>

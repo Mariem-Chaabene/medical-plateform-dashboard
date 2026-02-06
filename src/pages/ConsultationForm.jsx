@@ -81,7 +81,7 @@ export default function ConsultationForm() {
     checklist: [],
     error: "",
   });
-
+  const GROUPES_SANGUINS = ["A+","A-","B+","B-","AB+","AB-","O+","O-"];
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -100,6 +100,7 @@ export default function ConsultationForm() {
     temperature: "",
     frequence_cardiaque: "",
     pression_arterielle: "",
+    groupe_sanguin: "",
   });
 
   const [toast, setToast] = useState({
@@ -247,6 +248,7 @@ export default function ConsultationForm() {
         temperature: data?.temperature ?? "",
         frequence_cardiaque: data?.frequence_cardiaque ?? "",
         pression_arterielle: data?.pression_arterielle ?? "",
+        groupe_sanguin: data?.dme?.groupe_sanguin ?? "", // ✅
       };
 
       if (!next.imc) next.imc = computeImc(next.poids, next.taille);
@@ -363,6 +365,7 @@ export default function ConsultationForm() {
         temperature: toNumberOrNull(form.temperature),
         frequence_cardiaque: toNumberOrNull(form.frequence_cardiaque),
         pression_arterielle: form.pression_arterielle.trim(),
+        groupe_sanguin: form.groupe_sanguin || null, // ✅
         finish,
       };
 

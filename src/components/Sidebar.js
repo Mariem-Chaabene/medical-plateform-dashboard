@@ -12,7 +12,7 @@ const MENU_CONFIG = {
       children: [
         { label: "Type Analyses", path: "/type_analyses" },
         { label: "Type Examens", path: "/type_examens" },
-        { label: "Type Antécédents", path: "/type_antecedents" },
+        { label: "Type Antécédents", path: "/type_antecedants" },
       ],
     },
   ],

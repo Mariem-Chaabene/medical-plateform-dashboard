@@ -37,7 +37,7 @@ export default function Antecedents({ token, dmeId }) {
       setError("");
 
       const [resTypes, resItems] = await Promise.all([
-        fetch(`${API}/type-antecedents`, { headers: authHeaders }),
+        fetch(`${API}/type-antecedants`, { headers: authHeaders }),
         fetch(`${API}/dmes/${dmeId}/antecedents`, { headers: authHeaders }),
       ]);
 
@@ -45,7 +45,7 @@ export default function Antecedents({ token, dmeId }) {
       const itxt = await resItems.text();
 
       if (!resTypes.ok) {
-        console.error("type-antecedents error:", resTypes.status, ttxt);
+        console.error("type-antecedants error:", resTypes.status, ttxt);
         throw new Error("Impossible de charger les types d’antécédents.");
       }
       if (!resItems.ok) {

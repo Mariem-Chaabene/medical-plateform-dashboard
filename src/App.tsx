@@ -25,6 +25,16 @@ import TypeAnalyseCreate from "./pages/TypeAnalyseCreate";
 import TypeAnalyseShow from "./pages/TypeAnalyseShow";
 import TypeAnalyseEdit from "./pages/TypeAnalyseEdit";
 
+import TypeExamens from "./pages/TypeExamens";
+import TypeExamenCreate from "./pages/TypeExamenCreate";
+import TypeExamenShow from "./pages/TypeExamenShow";
+import TypeExamenEdit from "./pages/TypeExamenEdit";
+
+import TypeAntecedants from "./pages/TypeAntecedants";
+import TypeAntecedantCreate from "./pages/TypeAntecedantCreate";
+import TypeAntecedantShow from "./pages/TypeAntecedantShow";
+import TypeAntecedantEdit from "./pages/TypeAntecedantEdit";
+
 function App() {
   return (
     <BrowserRouter>
@@ -227,6 +237,73 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route
+          path="/type_examens"
+          element={
+            <ProtectedRoute>
+              <TypeExamens />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/type_examens/create"
+          element={
+            <PrivateRoute requiredRole="admin">
+              <TypeExamenCreate />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/type_examens/:id"
+          element={
+            <ProtectedRoute>
+              <TypeExamenShow />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/type_examens/:id/edit"
+          element={
+            <PrivateRoute requiredRole="admin">
+              <TypeExamenEdit />
+            </PrivateRoute>
+          }
+        />
+
+        
+         <Route
+          path="/type_antecedants"
+          element={
+            <ProtectedRoute>
+              <TypeAntecedants />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/type_antecedants/create"
+          element={
+            <PrivateRoute requiredRole="admin">
+              <TypeAntecedantCreate />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/type_antecedants/:id"
+          element={
+            <ProtectedRoute>
+              <TypeAntecedantShow />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/type_antecedants/:id/edit"
+          element={
+            <PrivateRoute requiredRole="admin">
+              <TypeAntecedantEdit />
+            </PrivateRoute>
+          }
+        />
+
 
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>

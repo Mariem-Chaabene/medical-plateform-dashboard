@@ -81,7 +81,7 @@ export default function ConsultationForm() {
     checklist: [],
     error: "",
   });
-  const GROUPES_SANGUINS = ["A+","A-","B+","B-","AB+","AB-","O+","O-"];
+  const GROUPES_SANGUINS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -93,7 +93,7 @@ export default function ConsultationForm() {
   const [form, setForm] = useState({
     motif: "",
     diagnostic: "",
-    traitement: "",
+    plan: "",
     poids: "",
     taille: "",
     imc: "",
@@ -114,19 +114,14 @@ export default function ConsultationForm() {
 
   const validate = useCallback((data) => {
     const e = {};
-    const requiredText = [
-      "motif",
-      "diagnostic",
-      "traitement",
-      "pression_arterielle",
-    ];
+    const requiredText = ["motif"];
     const requiredNumber = [
       "poids",
       "taille",
       "temperature",
       "frequence_cardiaque",
     ];
-
+   
     for (const k of requiredText) {
       if (!String(data[k] ?? "").trim()) e[k] = "Champ obligatoire";
     }
@@ -141,7 +136,9 @@ export default function ConsultationForm() {
 
   // ✅ évite les réponses IA qui arrivent dans le désordre
   const abortRef = useRef(null);
-
+ const isFinished =
+      consult?.salle_attente?.statut === "termine" ||
+      consult?.salleAttente?.statut === "termine";
   const runAiPreview = useMemo(
     () =>
       debounce(async (nextForm, ageOverride = null) => {
@@ -171,14 +168,16 @@ export default function ConsultationForm() {
                 age_years: ageToSend,
 
                 temperature: toNumberOrNull(nextForm.temperature),
-                frequence_cardiaque: toNumberOrNull(nextForm.frequence_cardiaque),
+                frequence_cardiaque: toNumberOrNull(
+                  nextForm.frequence_cardiaque,
+                ),
                 pression_arterielle:
                   String(nextForm.pression_arterielle || "").trim() || null,
 
                 poids: toNumberOrNull(nextForm.poids),
                 taille: toNumberOrNull(nextForm.taille),
               }),
-            }
+            },
           );
 
           const data = await res.json();
@@ -203,7 +202,7 @@ export default function ConsultationForm() {
           }));
         }
       }, 700),
-    [token, id, ageYears]
+    [token, id, ageYears],
   );
 
   const load = useCallback(async () => {
@@ -211,12 +210,9 @@ export default function ConsultationForm() {
       setLoading(true);
       setError("");
 
-      const res = await fetch(
-        `http://127.0.0.1:8000/api/consultations/${id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await fetch(`http://127.0.0.1:8000/api/consultations/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const txt = await res.text();
       if (!res.ok) {
@@ -241,7 +237,7 @@ export default function ConsultationForm() {
       const next = {
         motif: data?.motif ?? "",
         diagnostic: data?.diagnostic ?? "",
-        traitement: data?.traitement ?? "",
+        plan: data?.plan ?? data?.traitement ?? "",
         poids: data?.poids ?? "",
         taille: data?.taille ?? "",
         imc: data?.imc ?? "",
@@ -319,7 +315,8 @@ export default function ConsultationForm() {
 
               temperature: toNumberOrNull(form.temperature),
               frequence_cardiaque: toNumberOrNull(form.frequence_cardiaque),
-              pression_arterielle: String(form.pression_arterielle || "").trim() || null,
+              pression_arterielle:
+                String(form.pression_arterielle || "").trim() || null,
 
               poids: toNumberOrNull(form.poids),
               taille: toNumberOrNull(form.taille),
@@ -327,14 +324,14 @@ export default function ConsultationForm() {
               source, // "save" | "finish"
             }),
           },
-          3500
+          3500,
         );
       } catch (e) {
         // ✅ Pro: ne pas bloquer la sauvegarde consultation si snapshot IA échoue
         console.warn("Snapshot IA non enregistré:", e);
       }
     },
-    [token, id, ageYears, form]
+    [token, id, ageYears, form],
   );
 
   const save = async (finish = false) => {
@@ -359,7 +356,7 @@ export default function ConsultationForm() {
       const payload = {
         motif: form.motif.trim(),
         diagnostic: form.diagnostic.trim(),
-        traitement: form.traitement.trim(),
+        plan: form.plan?.trim() || null,
         poids: toNumberOrNull(form.poids),
         taille: toNumberOrNull(form.taille),
         temperature: toNumberOrNull(form.temperature),
@@ -369,17 +366,14 @@ export default function ConsultationForm() {
         finish,
       };
 
-      const res = await fetch(
-        `http://127.0.0.1:8000/api/consultations/${id}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+      const res = await fetch(`http://127.0.0.1:8000/api/consultations/${id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
       const txt = await res.text();
       if (!res.ok) {
@@ -475,7 +469,10 @@ export default function ConsultationForm() {
                     label: "Consultation",
                     content: (
                       <>
-                        <div className="form-group" style={{ marginBottom: 12 }}>
+                        <div
+                          className="form-group"
+                          style={{ marginBottom: 12 }}
+                        >
                           <label className="form-label">Motif</label>
                           <Input
                             value={form.motif}
@@ -483,23 +480,31 @@ export default function ConsultationForm() {
                           />
                         </div>
 
-                        <div className="form-group" style={{ marginBottom: 12 }}>
+                        <div
+                          className="form-group"
+                          style={{ marginBottom: 12 }}
+                        >
                           <label className="form-label">Diagnostic</label>
                           <textarea
                             className="custom-input"
                             style={{ minHeight: 90, padding: 10 }}
                             value={form.diagnostic}
-                            onChange={(e) => setField("diagnostic", e.target.value)}
+                            onChange={(e) =>
+                              setField("diagnostic", e.target.value)
+                            }
                           />
                         </div>
 
-                        <div className="form-group" style={{ marginBottom: 12 }}>
-                          <label className="form-label">Traitement</label>
+                        <div
+                          className="form-group"
+                          style={{ marginBottom: 12 }}
+                        >
+                          <label className="form-label">Plan / Notes</label>
                           <textarea
                             className="custom-input"
                             style={{ minHeight: 90, padding: 10 }}
-                            value={form.traitement}
-                            onChange={(e) => setField("traitement", e.target.value)}
+                            value={form.plan}
+                            onChange={(e) => setField("plan", e.target.value)}
                           />
                         </div>
 
@@ -582,6 +587,7 @@ export default function ConsultationForm() {
                         token={token}
                         dmeId={consult?.dme?.id}
                         consultationId={consult?.id}
+                        allowResults={isFinished}
                       />
                     ),
                   },
@@ -593,6 +599,7 @@ export default function ConsultationForm() {
                         token={token}
                         dmeId={consult?.dme?.id}
                         consultationId={consult?.id}
+                        allowResults={false}
                       />
                     ),
                   },
@@ -612,7 +619,9 @@ export default function ConsultationForm() {
                     key: "certificat",
                     label: "Certificat",
                     content: (
-                      <div>TODO: certificat (texte + génération PDF plus tard)</div>
+                      <div>
+                        TODO: certificat (texte + génération PDF plus tard)
+                      </div>
                     ),
                   },
                 ]}

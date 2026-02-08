@@ -1,9 +1,19 @@
+// src/pages/Analyses.jsx
 import { useEffect, useMemo, useState } from "react";
 import Input from "../components/ui/Input/Input";
 
 const API = "http://127.0.0.1:8000/api";
 
-export default function Analyses({ token, dmeId, consultationId }) {
+/**
+ * Bonne pratique (workflow):
+ * - Pendant la consultation: le médecin "demande" une analyse (type + date de demande + éventuelle indication).
+ * - Les résultats arrivent plus tard (labo) => on renseigne résultat/remarques après.
+ *
+ * ✅ Dans l'écran ConsultationForm, passez allowResults={false}
+ *    pour ne PAS afficher l'action "Ajouter résultat" pendant la consultation.
+ * ✅ Dans un écran "Résultats / Historique" (plus tard), vous pourrez passer allowResults={true}.
+ */
+export default function Analyses({ token, dmeId, consultationId, allowResults = false }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -12,9 +22,18 @@ export default function Analyses({ token, dmeId, consultationId }) {
   const [items, setItems] = useState([]);
   const [error, setError] = useState("");
 
+  // Formulaire "demande d'analyse"
   const [form, setForm] = useState({
     type_analyse_id: "",
     date_analyse: "",
+    // ✅ "remarques" ici = indication/notes de demande (optionnel)
+    remarques: "",
+  });
+
+  // Modal "résultat"
+  const [resultModal, setResultModal] = useState({
+    open: false,
+    id: null,
     resultat: "",
     remarques: "",
   });
@@ -28,8 +47,11 @@ export default function Analyses({ token, dmeId, consultationId }) {
   };
 
   const canSubmit = useMemo(() => {
-    return String(form.type_analyse_id || "").trim() !== "";
-  }, [form.type_analyse_id]);
+    return (
+      String(form.type_analyse_id || "").trim() !== "" &&
+      String(form.date_analyse || "").trim() !== ""
+    );
+  }, [form.type_analyse_id, form.date_analyse]);
 
   const load = async () => {
     if (!token || !dmeId) return;
@@ -74,13 +96,13 @@ export default function Analyses({ token, dmeId, consultationId }) {
   }, [token, dmeId]);
 
   const add = async () => {
-    if (!canSubmit) {
+    if (!String(form.type_analyse_id || "").trim()) {
       setError("Veuillez choisir un type d’analyse.");
       return;
     }
-    if (!form.date_analyse) {
-      // ton controller exige required|date
-      setError("Veuillez remplir la date de l’analyse.");
+    if (!String(form.date_analyse || "").trim()) {
+      // controller: date_analyse required|date
+      setError("Veuillez remplir la date de demande de l’analyse.");
       return;
     }
 
@@ -92,9 +114,11 @@ export default function Analyses({ token, dmeId, consultationId }) {
         dme_id: Number(dmeId),
         consultation_id: consultationId ? Number(consultationId) : null,
         type_analyse_id: Number(form.type_analyse_id),
-        date_analyse: form.date_analyse || null,
-        resultat: form.resultat?.trim() ? form.resultat.trim() : null,
+        date_analyse: form.date_analyse,
+        // ✅ Remarques = indication de demande (optionnel)
         remarques: form.remarques?.trim() ? form.remarques.trim() : null,
+        // ✅ Résultat: jamais à la demande (bonne pratique)
+        resultat: null,
       };
 
       const res = await fetch(`${API}/analyses`, {
@@ -113,13 +137,7 @@ export default function Analyses({ token, dmeId, consultationId }) {
         return;
       }
 
-      setForm({
-        type_analyse_id: "",
-        date_analyse: "",
-        resultat: "",
-        remarques: "",
-      });
-
+      setForm({ type_analyse_id: "", date_analyse: "", remarques: "" });
       await load();
     } catch (e) {
       console.error(e);
@@ -163,6 +181,68 @@ export default function Analyses({ token, dmeId, consultationId }) {
     return String(d).replace("T", " ").slice(0, 16);
   };
 
+  const getStatusLabel = (it) => {
+    // ✅ si pas d'etat côté backend, on déduit du résultat
+    return it?.resultat ? "Terminé" : "En attente";
+  };
+
+  const openResult = (it) => {
+    if (!it?.id) return;
+    setError("");
+    setResultModal({
+      open: true,
+      id: it.id,
+      resultat: it.resultat ?? "",
+      remarques: it.remarques ?? "",
+    });
+  };
+
+  const closeResult = () => {
+    setResultModal({ open: false, id: null, resultat: "", remarques: "" });
+  };
+
+  const saveResult = async () => {
+    if (!resultModal.id) return;
+
+    if (!String(resultModal.resultat || "").trim()) {
+      setError("Veuillez saisir le résultat.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+
+      // ⚠️ BACKEND: route PUT/PATCH /analyses/{id} nécessaire
+      const res = await fetch(`${API}/analyses/${resultModal.id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resultat: resultModal.resultat.trim(),
+          remarques: String(resultModal.remarques || "").trim() || null,
+        }),
+      });
+
+      const txt = await res.text();
+      if (!res.ok) {
+        console.error("update analyse result error:", res.status, txt);
+        setError("Impossible d’enregistrer le résultat (route update manquante ?).");
+        return;
+      }
+
+      closeResult();
+      await load();
+    } catch (e) {
+      console.error(e);
+      setError("Erreur réseau.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div>
       {loading && <div>Chargement...</div>}
@@ -174,7 +254,7 @@ export default function Analyses({ token, dmeId, consultationId }) {
 
       {!loading && (
         <>
-          {/* Formulaire d'ajout */}
+          {/* ✅ Formulaire DEMANDE */}
           <div
             style={{
               background: "#fff",
@@ -183,15 +263,9 @@ export default function Analyses({ token, dmeId, consultationId }) {
               padding: 14,
             }}
           >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 12,
-              }}
-            >
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div className="form-group">
-                <label className="form-label">Type d’analyse</label>
+                <label className="form-label">Type d’analyse *</label>
                 <select
                   className="custom-input"
                   style={{ width: "100%", padding: 10 }}
@@ -210,7 +284,7 @@ export default function Analyses({ token, dmeId, consultationId }) {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Date analyse *</label>
+                <label className="form-label">Date de demande *</label>
                 <Input
                   type="datetime-local"
                   value={form.date_analyse}
@@ -220,18 +294,8 @@ export default function Analyses({ token, dmeId, consultationId }) {
                 />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Résultat</label>
-                <Input
-                  value={form.resultat}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, resultat: e.target.value }))
-                  }
-                />
-              </div>
-
               <div className="form-group" style={{ gridColumn: "1 / span 2" }}>
-                <label className="form-label">Remarques</label>
+                <label className="form-label">Indication / Remarques (optionnel)</label>
                 <textarea
                   className="custom-input"
                   style={{ minHeight: 80, padding: 10, width: "100%" }}
@@ -243,13 +307,7 @@ export default function Analyses({ token, dmeId, consultationId }) {
               </div>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: 12,
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
               <button
                 type="button"
                 disabled={saving || !canSubmit}
@@ -265,16 +323,14 @@ export default function Analyses({ token, dmeId, consultationId }) {
                   opacity: saving || !canSubmit ? 0.7 : 1,
                 }}
               >
-                {saving ? "Ajout..." : "Ajouter"}
+                {saving ? "Ajout..." : "Demander l’analyse"}
               </button>
             </div>
           </div>
 
-          {/* Liste */}
+          {/* ✅ Liste */}
           <div style={{ marginTop: 14 }}>
-            <div style={{ fontWeight: 900, marginBottom: 10 }}>
-              Analyses enregistrées
-            </div>
+            <div style={{ fontWeight: 900, marginBottom: 10 }}>Analyses</div>
 
             {items.length === 0 ? (
               <div style={{ color: "#6b7280" }}>Aucune analyse.</div>
@@ -296,13 +352,11 @@ export default function Analyses({ token, dmeId, consultationId }) {
                   >
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 900, color: "#111827" }}>
-                        {it?.type_analyse?.libelle ||
-                          it?.typeAnalyse?.libelle ||
-                          "—"}
+                        {it?.type_analyse?.libelle || it?.typeAnalyse?.libelle || "—"}
                       </div>
 
                       <div style={{ fontSize: 13, color: "#6b7280" }}>
-                        Date: {formatDate(it.date_analyse)}
+                        Date: {formatDate(it.date_analyse)} • Statut: {getStatusLabel(it)}
                       </div>
 
                       {it.resultat ? (
@@ -318,30 +372,127 @@ export default function Analyses({ token, dmeId, consultationId }) {
                       ) : null}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => remove(it.id)}
-                      disabled={deletingId === it.id}
-                      style={{
-                        background: "#fee2e2",
-                        color: "#991b1b",
-                        border: "none",
-                        borderRadius: 10,
-                        padding: "8px 12px",
-                        cursor:
-                          deletingId === it.id ? "not-allowed" : "pointer",
-                        fontWeight: 800,
-                        opacity: deletingId === it.id ? 0.7 : 1,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {deletingId === it.id ? "Supp..." : "Supprimer"}
-                    </button>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      {/* ✅ Visible seulement si allowResults=true */}
+                      {allowResults && !it.resultat ? (
+                        <button
+                          type="button"
+                          onClick={() => openResult(it)}
+                          disabled={saving}
+                          style={{
+                            background: "#e0f2fe",
+                            color: "#075985",
+                            border: "none",
+                            borderRadius: 10,
+                            padding: "8px 12px",
+                            cursor: "pointer",
+                            fontWeight: 800,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          Ajouter résultat
+                        </button>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={() => remove(it.id)}
+                        disabled={deletingId === it.id}
+                        style={{
+                          background: "#fee2e2",
+                          color: "#991b1b",
+                          border: "none",
+                          borderRadius: 10,
+                          padding: "8px 12px",
+                          cursor: deletingId === it.id ? "not-allowed" : "pointer",
+                          fontWeight: 800,
+                          opacity: deletingId === it.id ? 0.7 : 1,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {deletingId === it.id ? "Supp..." : "Supprimer"}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
+
+          {/* ✅ Modal résultat */}
+          {resultModal.open && (
+            <div
+              style={{
+                marginTop: 14,
+                background: "#fff",
+                border: "1px solid #eef2f7",
+                borderRadius: 14,
+                padding: 14,
+              }}
+            >
+              <div style={{ fontWeight: 900, marginBottom: 10 }}>Renseigner le résultat</div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
+                <div className="form-group">
+                  <label className="form-label">Résultat *</label>
+                  <Input
+                    value={resultModal.resultat}
+                    onChange={(e) =>
+                      setResultModal((m) => ({ ...m, resultat: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Remarques (optionnel)</label>
+                  <textarea
+                    className="custom-input"
+                    style={{ minHeight: 80, padding: 10, width: "100%" }}
+                    value={resultModal.remarques}
+                    onChange={(e) =>
+                      setResultModal((m) => ({ ...m, remarques: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 12 }}>
+                <button
+                  type="button"
+                  onClick={closeResult}
+                  style={{
+                    background: "#f3f4f6",
+                    color: "#111827",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "10px 14px",
+                    cursor: "pointer",
+                    fontWeight: 900,
+                  }}
+                >
+                  Annuler
+                </button>
+
+                <button
+                  type="button"
+                  onClick={saveResult}
+                  disabled={saving}
+                  style={{
+                    background: "#10b981",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "10px 14px",
+                    cursor: saving ? "not-allowed" : "pointer",
+                    fontWeight: 900,
+                    opacity: saving ? 0.7 : 1,
+                  }}
+                >
+                  {saving ? "Enregistrement..." : "Enregistrer résultat"}
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

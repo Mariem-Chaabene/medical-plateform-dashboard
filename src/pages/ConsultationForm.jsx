@@ -587,7 +587,7 @@ export default function ConsultationForm() {
                         token={token}
                         dmeId={consult?.dme?.id}
                         consultationId={consult?.id}
-                        allowResults={isFinished}
+                        allowResults={false}
                       />
                     ),
                   },

@@ -34,6 +34,7 @@ import TypeAntecedants from "./pages/TypeAntecedants";
 import TypeAntecedantCreate from "./pages/TypeAntecedantCreate";
 import TypeAntecedantShow from "./pages/TypeAntecedantShow";
 import TypeAntecedantEdit from "./pages/TypeAntecedantEdit";
+import PatientDossier from "./pages/PatientDossier";
 
 function App() {
   return (
@@ -303,6 +304,7 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route path="/patients/:id/dossier" element={<PatientDossier />} />
 
 
         <Route path="/" element={<Navigate to="/login" replace />} />

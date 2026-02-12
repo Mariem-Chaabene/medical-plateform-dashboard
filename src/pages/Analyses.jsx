@@ -4,6 +4,13 @@ import Input from "../components/ui/Input/Input";
 
 const API = "http://127.0.0.1:8000/api";
 
+// ✅ datetime-local helper (local time)
+const toLocalDatetimeInput = (d = new Date()) => {
+  const dt = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return dt.toISOString().slice(0, 16);
+};
+
+
 /**
  * Bonne pratique (workflow):
  * - Pendant la consultation: le médecin "demande" une analyse (type + date de demande + éventuelle indication).
@@ -13,7 +20,7 @@ const API = "http://127.0.0.1:8000/api";
  *    pour ne PAS afficher l'action "Ajouter résultat" pendant la consultation.
  * ✅ Dans un écran "Résultats / Historique" (plus tard), vous pourrez passer allowResults={true}.
  */
-export default function Analyses({ token, dmeId, consultationId, allowResults = false }) {
+export default function Analyses({ token, dmeId, consultationId, allowResults }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -25,7 +32,7 @@ export default function Analyses({ token, dmeId, consultationId, allowResults = 
   // Formulaire "demande d'analyse"
   const [form, setForm] = useState({
     type_analyse_id: "",
-    date_analyse: "",
+    date_analyse: toLocalDatetimeInput(),
     // ✅ "remarques" ici = indication/notes de demande (optionnel)
     remarques: "",
   });
@@ -36,7 +43,13 @@ export default function Analyses({ token, dmeId, consultationId, allowResults = 
     id: null,
     resultat: "",
     remarques: "",
+    file: null,
   });
+
+  // ✅ Par défaut: on n'affiche pas la saisie de résultats quand on est DANS une consultation
+  // (consultationId présent). On pourra l'activer après clôture en passant allowResults={true}.
+  const allowResultsResolved =
+    typeof allowResults === "boolean" ? allowResults : !consultationId;
 
   const parseArray = (raw) => {
     if (!raw) return [];
@@ -137,7 +150,7 @@ export default function Analyses({ token, dmeId, consultationId, allowResults = 
         return;
       }
 
-      setForm({ type_analyse_id: "", date_analyse: "", remarques: "" });
+      setForm({ type_analyse_id: "", date_analyse: toLocalDatetimeInput(), remarques: "" });
       await load();
     } catch (e) {
       console.error(e);
@@ -182,8 +195,12 @@ export default function Analyses({ token, dmeId, consultationId, allowResults = 
   };
 
   const getStatusLabel = (it) => {
-    // ✅ si pas d'etat côté backend, on déduit du résultat
-    return it?.resultat ? "Terminé" : "En attente";
+    const hasText = Boolean(String(it?.resultat || "").trim());
+    const hasFile = Boolean(it?.result_file_url || it?.result_file_path);
+    const etat = String(it?.etat || "").toLowerCase();
+
+    if (etat === "termine" || hasText || hasFile) return "Terminé";
+    return "En attente";
   };
 
   const openResult = (it) => {
@@ -194,18 +211,22 @@ export default function Analyses({ token, dmeId, consultationId, allowResults = 
       id: it.id,
       resultat: it.resultat ?? "",
       remarques: it.remarques ?? "",
+      file: null,
     });
   };
 
   const closeResult = () => {
-    setResultModal({ open: false, id: null, resultat: "", remarques: "" });
+    setResultModal({ open: false, id: null, resultat: "", remarques: "", file: null });
   };
 
   const saveResult = async () => {
     if (!resultModal.id) return;
 
-    if (!String(resultModal.resultat || "").trim()) {
-      setError("Veuillez saisir le résultat.");
+    const hasText = Boolean(String(resultModal.resultat || "").trim());
+    const hasFile = Boolean(resultModal.file);
+
+    if (!hasText && !hasFile) {
+      setError("Veuillez saisir le résultat ou joindre un fichier.");
       return;
     }
 
@@ -214,16 +235,18 @@ export default function Analyses({ token, dmeId, consultationId, allowResults = 
       setError("");
 
       // ⚠️ BACKEND: route PUT/PATCH /analyses/{id} nécessaire
+      const payload = {
+        remarques: String(resultModal.remarques || "").trim() || null,
+      };
+      if (hasText) payload.resultat = String(resultModal.resultat).trim();
+
       const res = await fetch(`${API}/analyses/${resultModal.id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          resultat: resultModal.resultat.trim(),
-          remarques: String(resultModal.remarques || "").trim() || null,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const txt = await res.text();
@@ -231,6 +254,23 @@ export default function Analyses({ token, dmeId, consultationId, allowResults = 
         console.error("update analyse result error:", res.status, txt);
         setError("Impossible d’enregistrer le résultat (route update manquante ?).");
         return;
+      }
+
+      // ✅ Upload fichier (option pro)
+      if (hasFile) {
+        const fd = new FormData();
+        fd.append("file", resultModal.file);
+        const resFile = await fetch(`${API}/analyses/${resultModal.id}/file`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        });
+        const tFile = await resFile.text();
+        if (!resFile.ok) {
+          console.error("upload analyse file error:", resFile.status, tFile);
+          setError("Fichier non enregistré (PDF/JPG/PNG). Vérifiez le serveur.");
+          return;
+        }
       }
 
       closeResult();
@@ -370,11 +410,20 @@ export default function Analyses({ token, dmeId, consultationId, allowResults = 
                           <b>Remarques :</b> {it.remarques}
                         </div>
                       ) : null}
+
+                      {it?.result_file_url ? (
+                        <div style={{ marginTop: 6, fontSize: 13 }}>
+                          <b>Pièce jointe :</b>{" "}
+                          <a href={it.result_file_url} target="_blank" rel="noreferrer">
+                            Ouvrir le fichier
+                          </a>
+                        </div>
+                      ) : null}
                     </div>
 
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       {/* ✅ Visible seulement si allowResults=true */}
-                      {allowResults && !it.resultat ? (
+                      {allowResultsResolved && getStatusLabel(it) !== "Terminé" ? (
                         <button
                           type="button"
                           onClick={() => openResult(it)}
@@ -434,13 +483,29 @@ export default function Analyses({ token, dmeId, consultationId, allowResults = 
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
                 <div className="form-group">
-                  <label className="form-label">Résultat *</label>
+                  <label className="form-label">Résultat (texte)</label>
                   <Input
                     value={resultModal.resultat}
                     onChange={(e) =>
                       setResultModal((m) => ({ ...m, resultat: e.target.value }))
                     }
                   />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Pièce jointe (PDF/JPG/PNG) (optionnel)</label>
+                  <input
+                    type="file"
+                    accept="application/pdf,image/png,image/jpeg"
+                    onChange={(e) =>
+                      setResultModal((m) => ({ ...m, file: e.target.files?.[0] || null }))
+                    }
+                  />
+                  {resultModal.file ? (
+                    <div style={{ marginTop: 6, fontSize: 12, color: "#6b7280" }}>
+                      Fichier sélectionné : <b>{resultModal.file.name}</b>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="form-group">

@@ -26,20 +26,6 @@ const iconEdit = (
   </svg>
 );
 
-const iconShow = (
-  <svg
-    width="20"
-    height="20"
-    fill="none"
-    stroke="#b2b2b2"
-    strokeWidth="2"
-    viewBox="0 0 24 24"
-  >
-    <circle cx="12" cy="12" r="3" />
-    <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z" />
-  </svg>
-);
-
 const iconDme = (
   <svg
     width="20"
@@ -109,13 +95,13 @@ export default function Patients() {
       (getAge(p.date_naissance) || "")
     )
       .toLowerCase()
-      .includes(search.toLowerCase())
+      .includes(search.toLowerCase()),
   );
   const totalItems = filteredPatients.length;
   const pageCount = Math.ceil(totalItems / perPage);
   const pagedPatients = filteredPatients.slice(
     (currentPage - 1) * perPage,
-    currentPage * perPage
+    currentPage * perPage,
   );
 
   useEffect(() => {
@@ -140,8 +126,8 @@ export default function Patients() {
         const list = Array.isArray(data)
           ? data
           : Array.isArray(data.data)
-          ? data.data
-          : [];
+            ? data.data
+            : [];
         setMedecins(list);
       })
       .catch(() => {
@@ -161,7 +147,7 @@ export default function Patients() {
             setSelected((sel) =>
               e.target.checked
                 ? [...sel, row.id]
-                : sel.filter((id) => id !== row.id)
+                : sel.filter((id) => id !== row.id),
             );
           }}
         />
@@ -217,7 +203,6 @@ export default function Patients() {
     { label: "Âge", key: "date_naissance", render: getAge },
   ];
 
-
   const actions = [
     {
       label: "Edit",
@@ -225,9 +210,9 @@ export default function Patients() {
       handler: (row) => navigate(`/patients/${row.id}/edit`),
     },
     {
-      label: "Show",
-      icon: iconShow,
-      handler: (row) => navigate(`/patients/${row.id}`),
+      label: "Dossier",
+      icon: iconDme,
+      handler: (row) => navigate(`/patients/${row.id}/dossier`),
     },
     {
       label: "Rendez-vous",
@@ -330,18 +315,18 @@ export default function Patients() {
                       }).then((res) => {
                         if (!res.ok)
                           throw new Error(
-                            `Erreur suppression patient id ${id}`
+                            `Erreur suppression patient id ${id}`,
                           );
-                      })
-                    )
+                      }),
+                    ),
                   );
                   setPatients((items) =>
-                    items.filter((p) => !selected.includes(p.id))
+                    items.filter((p) => !selected.includes(p.id)),
                   );
                   setSelected([]);
                 } catch (error) {
                   setError(
-                    "Erreur lors de la suppression d'un ou plusieurs patients."
+                    "Erreur lors de la suppression d'un ou plusieurs patients.",
                   );
                   console.error(error);
                 }

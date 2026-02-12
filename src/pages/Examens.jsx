@@ -63,6 +63,7 @@ export default function Examens({ token, dmeId, consultationId, allowResults }) 
     etat: "termine",
     resultat: "",
     remarques: "",
+    file: null,
   });
 
   // ✅ Par défaut: pas de saisie de résultats pendant la consultation (consultationId présent).
@@ -280,18 +281,29 @@ export default function Examens({ token, dmeId, consultationId, allowResults }) 
       etat: "termine",
       resultat: it.resultat ?? "",
       remarques: it.remarques ?? "",
+      file: null,
     });
   };
 
   const closeResult = () => {
-    setResultModal({ open: false, id: null, etat: "termine", resultat: "", remarques: "" });
+    setResultModal({
+      open: false,
+      id: null,
+      etat: "termine",
+      resultat: "",
+      remarques: "",
+      file: null,
+    });
   };
 
   const saveResult = async () => {
     if (!resultModal.id) return;
 
-    if (!String(resultModal.resultat || "").trim()) {
-      setError("Veuillez saisir le résultat.");
+    const hasText = String(resultModal.resultat || "").trim() !== "";
+    const hasFile = Boolean(resultModal.file);
+
+    if (!hasText && !hasFile) {
+      setError("Veuillez saisir le résultat ou joindre un fichier.");
       return;
     }
 
@@ -299,17 +311,20 @@ export default function Examens({ token, dmeId, consultationId, allowResults }) 
       setSaving(true);
       setError("");
 
+      // 1) Mise à jour texte (si saisi) + remarques
+      const updatePayload = {
+        etat: resultModal.etat || "termine",
+        remarques: String(resultModal.remarques || "").trim() || null,
+      };
+      if (hasText) updatePayload.resultat = resultModal.resultat.trim();
+
       const res = await fetch(`${API}/examens/${resultModal.id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          etat: resultModal.etat || "termine",
-          resultat: resultModal.resultat.trim(),
-          remarques: String(resultModal.remarques || "").trim() || null,
-        }),
+        body: JSON.stringify(updatePayload),
       });
 
       const txt = await res.text();
@@ -317,6 +332,27 @@ export default function Examens({ token, dmeId, consultationId, allowResults }) 
         console.error("update examen result error:", res.status, txt);
         setError("Impossible d’enregistrer le résultat.");
         return;
+      }
+
+      // 2) Upload fichier (optionnel)
+      if (hasFile) {
+        const fd = new FormData();
+        fd.append("file", resultModal.file);
+
+        const resFile = await fetch(`${API}/examens/${resultModal.id}/file`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: fd,
+        });
+
+        const txtFile = await resFile.text();
+        if (!resFile.ok) {
+          console.error("upload examen file error:", resFile.status, txtFile);
+          setError("Résultat enregistré, mais l’upload du fichier a échoué.");
+          // on continue quand même
+        }
       }
 
       closeResult();
@@ -459,6 +495,19 @@ export default function Examens({ token, dmeId, consultationId, allowResults }) 
                           <b>Remarques :</b> {it.remarques}
                         </div>
                       ) : null}
+
+                      {it?.result_file_url ? (
+                        <div style={{ marginTop: 6, fontSize: 13 }}>
+                          <b>Pièce jointe :</b>{" "}
+                          <a
+                            href={it.result_file_url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Voir fichier
+                          </a>
+                        </div>
+                      ) : null}
                     </div>
 
                     <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -555,11 +604,27 @@ export default function Examens({ token, dmeId, consultationId, allowResults }) 
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Résultat *</label>
+                  <label className="form-label">Résultat (texte)</label>
                   <Input
                     value={resultModal.resultat}
                     onChange={(e) => setResultModal((m) => ({ ...m, resultat: e.target.value }))}
                   />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: "1 / span 2" }}>
+                  <label className="form-label">Pièce jointe (PDF/JPG/PNG)</label>
+                  <input
+                    type="file"
+                    accept="application/pdf,image/png,image/jpeg"
+                    onChange={(e) =>
+                      setResultModal((m) => ({ ...m, file: e.target.files?.[0] || null }))
+                    }
+                  />
+                  {resultModal.file ? (
+                    <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
+                      Fichier choisi : {resultModal.file.name}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="form-group" style={{ gridColumn: "1 / span 2" }}>

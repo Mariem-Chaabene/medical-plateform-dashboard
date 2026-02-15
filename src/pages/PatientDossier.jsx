@@ -36,9 +36,17 @@ function formatDateTime(d) {
   return String(d).replace("T", " ").slice(0, 16);
 }
 
+// function formatDate(d) {
+//   if (!d) return "—";
+//   return String(d).slice(0, 10);
+// }
+
 function formatDate(d) {
   if (!d) return "—";
-  return String(d).slice(0, 10);
+  const s = String(d).slice(0, 10); // YYYY-MM-DD
+  const [y, m, day] = s.split("-");
+  if (!y || !m || !day) return s;
+  return `${day}/${m}/${y}`; // DD/MM/YYYY
 }
 
 function calcImc(poids, taille) {
@@ -53,6 +61,34 @@ function calcImc(poids, taille) {
   return Math.round(imc * 10) / 10;
 }
 
+function getInitials(patient) {
+  const n = patient?.user?.name || patient?.name || "";
+  const s = patient?.user?.surname || patient?.surname || "";
+  const txt = `${n} ${s}`.trim();
+  if (!txt) return "P";
+  const parts = txt.split(/\s+/).filter(Boolean);
+  const a = parts[0]?.[0] || "P";
+  const b = parts[1]?.[0] || "";
+  return (a + b).toUpperCase();
+}
+
+function getAgeFromPatient(patient) {
+  const raw =
+    patient?.date_naissance ||
+    patient?.birth_date ||
+    patient?.user?.date_naissance ||
+    patient?.user?.birth_date ||
+    null;
+  if (!raw) return null;
+  const dob = new Date(raw);
+  if (Number.isNaN(dob.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const m = now.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age -= 1;
+  return age >= 0 ? age : null;
+}
+
 const iconBack = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
     <path
@@ -61,6 +97,28 @@ const iconBack = (
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const iconInfo = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M12 2a10 10 0 100 20 10 10 0 000-20z"
+      stroke="currentColor"
+      strokeWidth="2"
+    />
+    <path
+      d="M12 10v7"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path
+      d="M12 7h.01"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
     />
   </svg>
 );
@@ -84,6 +142,9 @@ export default function PatientDossier() {
   const [analyses, setAnalyses] = useState([]);
   const [examens, setExamens] = useState([]);
 
+  // Drawer infos patient
+  const [patientDrawerOpen, setPatientDrawerOpen] = useState(false);
+
   // Modal saisie résultat
   const [resultModal, setResultModal] = useState({
     open: false,
@@ -104,13 +165,13 @@ export default function PatientDossier() {
 
   const pendingAnalyses = useMemo(() => {
     return (analyses || []).filter(
-      (a) => (a?.etat || "en_attente") === "en_attente"
+      (a) => (a?.etat || "en_attente") === "en_attente",
     );
   }, [analyses]);
 
   const pendingExamens = useMemo(() => {
     return (examens || []).filter(
-      (e) => (e?.etat || "en_attente") === "en_attente"
+      (e) => (e?.etat || "en_attente") === "en_attente",
     );
   }, [examens]);
 
@@ -118,7 +179,7 @@ export default function PatientDossier() {
     if (!selectedConsultationId) return consultations?.[0] || null;
     return (
       consultations.find(
-        (c) => String(c.id) === String(selectedConsultationId)
+        (c) => String(c.id) === String(selectedConsultationId),
       ) || null
     );
   }, [consultations, selectedConsultationId]);
@@ -172,10 +233,10 @@ export default function PatientDossier() {
       const cons = Array.isArray(d?.consultations) ? d.consultations : [];
       cons.sort((a, b) => {
         const da = new Date(
-          a?.created_at || a?.date || a?.date_consultation || 0
+          a?.created_at || a?.date || a?.date_consultation || 0,
         ).getTime();
         const db = new Date(
-          b?.created_at || b?.date || b?.date_consultation || 0
+          b?.created_at || b?.date || b?.date_consultation || 0,
         ).getTime();
         return db - da;
       });
@@ -274,9 +335,7 @@ export default function PatientDossier() {
       if (hasText || String(remarques || "").trim() !== "") {
         const payload = {
           resultat: hasText ? resultat.trim() : null,
-          remarques: String(remarques || "").trim()
-            ? remarques.trim()
-            : null,
+          remarques: String(remarques || "").trim() ? remarques.trim() : null,
           etat: "termine",
         };
 
@@ -295,7 +354,7 @@ export default function PatientDossier() {
           console.error("update result error:", putRes.status, putTxt);
           const maybe = safeJsonParse(putTxt);
           throw new Error(
-            maybe?.message || "Erreur lors de l’enregistrement du résultat."
+            maybe?.message || "Erreur lors de l’enregistrement du résultat.",
           );
         }
       }
@@ -319,7 +378,7 @@ export default function PatientDossier() {
         padding: "6px 0",
       }}
     >
-      <div style={{ color: "#6b7280", fontWeight: 800 }}>{label}</div>
+      <div style={{ color: "#6b7280", fontWeight: 600 }}>{label}</div>
       <div style={{ fontWeight: 700, color: "#111827" }}>{value ?? "—"}</div>
     </div>
   );
@@ -336,7 +395,7 @@ export default function PatientDossier() {
       style={{
         marginTop: 16,
         marginBottom: 8,
-        fontWeight: 900,
+        fontWeight: 700,
         color: "#111827",
       }}
     >
@@ -349,7 +408,7 @@ export default function PatientDossier() {
       style={{
         background: bg,
         color,
-        fontWeight: 900,
+        fontWeight: 700,
         fontSize: 12,
         padding: "4px 10px",
         borderRadius: 999,
@@ -371,7 +430,7 @@ export default function PatientDossier() {
         borderRadius: 10,
         padding: "8px 12px",
         cursor: disabled ? "not-allowed" : "pointer",
-        fontWeight: 900,
+        fontWeight: 700,
         fontSize: 12,
         whiteSpace: "nowrap",
       }}
@@ -380,10 +439,261 @@ export default function PatientDossier() {
     </button>
   );
 
+  const drawerLabelValue = (label, value) => (
+    <div style={{ marginBottom: 12 }}>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          color: "rgba(255,255,255,0.72)",
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginTop: 2 }}
+      >
+        {value ?? "—"}
+      </div>
+    </div>
+  );
+
   if (!token) return <Navigate to="/login" />;
+
+  const patientName = patient?.user?.name
+    ? `${patient.user.name || ""} ${patient.user.surname || ""}`.trim()
+    : `Patient #${patientId}`;
+
+  const patientAge = getAgeFromPatient(patient);
 
   return (
     <Layout>
+      {/* Drawer (Infos patient) — sans overlay/backdrop */}
+      <div
+        aria-hidden={!patientDrawerOpen}
+        style={{
+          position: "fixed",
+          inset: "0 auto 0 0",
+          width: 360,
+          transform: patientDrawerOpen ? "translateX(0)" : "translateX(-102%)",
+          transition: "transform 220ms ease",
+          zIndex: 9999,
+          background: "grey",
+          borderRight: "1px solid rgba(255,255,255,0.08)",
+          boxShadow: "8px 0 24px rgba(0,0,0,0.28)",
+          display: "flex",
+          flexDirection: "column",
+          pointerEvents: patientDrawerOpen ? "auto" : "none",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: 16,
+            borderBottom: "1px solid rgba(255,255,255,0.10)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              minWidth: 0,
+            }}
+          >
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 14,
+                background: "rgba(72,198,239,0.16)",
+                border: "1px solid rgba(72,198,239,0.35)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 1000,
+                color: "#e5f6ff",
+                flex: "0 0 auto",
+              }}
+              title={patientName}
+            >
+              {getInitials(patient)}
+            </div>
+
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontWeight: 1000,
+                  color: "#fff",
+                  fontSize: 14,
+                  lineHeight: 1.1,
+                }}
+              >
+                {patientName}
+              </div>
+              <div
+                style={{
+                  color: "rgba(255,255,255,0.70)",
+                  fontWeight: 600,
+                  fontSize: 12,
+                  marginTop: 4,
+                }}
+              >
+                {patientAge != null ? `${patientAge} ans` : "Âge —"}
+                {dmeId ? ` • DME #${dmeId}` : ""}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setPatientDrawerOpen(false)}
+            aria-label="Fermer infos patient"
+            title="Fermer"
+            style={{
+              background: "transparent",
+              border: "1px solid rgba(255,255,255,0.14)",
+              width: 34,
+              height: 34,
+              borderRadius: 12,
+              color: "#fff",
+              cursor: "pointer",
+              fontWeight: 1000,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Content */}
+        <div style={{ padding: 16, overflowY: "auto" }}>
+          <div
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.10)",
+              borderRadius: 16,
+              padding: 14,
+            }}
+          >
+            <div style={{ fontWeight: 1000, color: "#fff", marginBottom: 10 }}>
+              Informations
+            </div>
+
+            {drawerLabelValue("Nom", patientName)}
+            {drawerLabelValue("Email", patient?.user?.email || "—")}
+            {drawerLabelValue("Téléphone", patient?.user?.telephone || "—")}
+            {drawerLabelValue("Groupe sanguin", dme?.groupe_sanguin || "—")}
+          </div>
+
+          <div style={{ height: 12 }} />
+
+          <div
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.10)",
+              borderRadius: 16,
+              padding: 14,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 10,
+                alignItems: "center",
+              }}
+            >
+              <div style={{ fontWeight: 1000, color: "#fff" }}>Historique</div>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "rgba(255,255,255,0.70)",
+                }}
+              >
+                {consultations.length} consultation(s)
+              </div>
+            </div>
+
+            <div
+              style={{
+                marginTop: 10,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              {consultations.length === 0 ? (
+                <div
+                  style={{
+                    color: "rgba(255,255,255,0.70)",
+                    fontWeight: 600,
+                    fontSize: 12,
+                  }}
+                >
+                  Aucune consultation.
+                </div>
+              ) : (
+                consultations.map((c) => {
+                  const selected =
+                    String(c.id) === String(selectedConsultation?.id);
+                  const d =
+                    c?.date_consultation ||
+                    c?.date ||
+                    c?.created_at ||
+                    c?.updated_at ||
+                    null;
+
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedConsultationId(c.id);
+                        setPatientDrawerOpen(false);
+                      }}
+                      style={{
+                        textAlign: "left",
+                        border: selected
+                          ? "1px solid rgba(72,198,239,0.55)"
+                          : "1px solid rgba(255,255,255,0.10)",
+                        background: selected
+                          ? "rgba(72,198,239,0.10)"
+                          : "rgba(0,0,0,0.15)",
+                        borderRadius: 14,
+                        padding: 10,
+                        cursor: "pointer",
+                        color: "#fff",
+                      }}
+                    >
+                      <div style={{ fontWeight: 1000, fontSize: 12 }}>
+                        {formatDate(d)}
+                        <span
+                          style={{
+                            marginLeft: 8,
+                            fontWeight: 700,
+                            color: "rgba(238, 45, 45, 0.7)",
+                          }}
+                        >
+                          • {String(c?.motif || "").trim() ? c.motif : "—"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <div
         style={{
@@ -414,26 +724,47 @@ export default function PatientDossier() {
           >
             {iconBack}
           </button>
-
-          <div>
-            <div style={{ fontWeight: 1000, fontSize: 18 }}>
-              Dossier médical
-            </div>
-            <div style={{ color: "#6b7280", fontWeight: 700, fontSize: 13 }}>
-              {patient?.user?.name
-                ? `${patient.user.name} ${patient.user.surname || ""}`
-                : `Patient #${patientId}`}
-              {dmeId ? ` • DME #${dmeId}` : ""}
-            </div>
-          </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+            alignItems: "center",
+            flexWrap: "wrap",
+            justifyContent: "flex-end",
+          }}
+        >
+          {/* Button: open patient drawer */}
+          <button
+            type="button"
+            onClick={() => setPatientDrawerOpen(true)}
+            style={{
+              background: "grey",
+              color: "#fff",
+              border: "none",
+              borderRadius: 12,
+              padding: "10px 12px",
+              cursor: "pointer",
+              fontWeight: 1000,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              boxShadow: "0 8px 20px rgba(17,24,39,0.12)",
+            }}
+            title="Afficher les informations du patient"
+          >
+            <span style={{ display: "inline-flex", color: "#fff" }}>
+              {iconInfo}
+            </span>
+            Infos 
+          </button>
+
           {pendingAnalyses.length + pendingExamens.length > 0
             ? pill(
                 `${pendingAnalyses.length + pendingExamens.length} résultat(s) en attente`,
                 "#92400e",
-                "#ffedd5"
+                "#ffedd5",
               )
             : pill("Aucun résultat en attente", "#065f46", "#d1fae5")}
         </div>
@@ -441,14 +772,14 @@ export default function PatientDossier() {
 
       {loading && <div>Chargement...</div>}
       {error && (
-        <div style={{ color: "red", fontWeight: 900, marginBottom: 12 }}>
+        <div style={{ color: "red", fontWeight: 700, marginBottom: 12 }}>
           {error}
         </div>
       )}
 
       {!loading && !dmeId && (
         <div style={cardStyle}>
-          <div style={{ fontWeight: 900, marginBottom: 6 }}>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>
             Aucun DME trouvé
           </div>
           <div style={{ color: "#6b7280", fontWeight: 700 }}>
@@ -458,13 +789,11 @@ export default function PatientDossier() {
       )}
 
       {!loading && dmeId && (
-        <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 14 }}>
+        <div
+          style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 14 }}
+        >
           {/* Colonne gauche: historique consultations */}
-          <div style={cardStyle}>
-            <div style={{ fontWeight: 1000, marginBottom: 10 }}>
-              Consultations
-            </div>
-
+          <div style={{ ...cardStyle, height: "fit-content" }}>
             {consultations.length === 0 ? (
               <div style={{ color: "#6b7280", fontWeight: 700 }}>
                 Aucune consultation.
@@ -472,8 +801,14 @@ export default function PatientDossier() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {consultations.map((c) => {
-                  const selected = String(c.id) === String(selectedConsultation?.id);
-                  const d = c?.date_consultation || c?.date || c?.created_at || c?.updated_at || null;
+                  const selected =
+                    String(c.id) === String(selectedConsultation?.id);
+                  const d =
+                    c?.date_consultation ||
+                    c?.date ||
+                    c?.created_at ||
+                    c?.updated_at ||
+                    null;
 
                   return (
                     <button
@@ -482,88 +817,110 @@ export default function PatientDossier() {
                       onClick={() => setSelectedConsultationId(c.id)}
                       style={{
                         textAlign: "left",
-                        border: selected ? "2px solid #48c6ef" : "1px solid #eef2f7",
-                        background: selected ? "#f7fbff" : "#fff",
+                        background: "none",
+                        border: "none",
+                        outline: "none",
                         borderRadius: 12,
                         padding: "10px 10px",
                         cursor: "pointer",
                       }}
                     >
                       <div style={{ fontWeight: 1000, fontSize: 13 }}>
-                        Consultation • {formatDate(d)}
-                      </div>
-                      <div style={{ color: "#6b7280", fontWeight: 700, fontSize: 12, marginTop: 2 }}>
-                        {String(c?.motif || "").trim() ? c.motif : "—"}
+                        Consultation le {formatDate(d)}
                       </div>
                     </button>
                   );
                 })}
               </div>
             )}
-
-            {sectionTitle("Infos patient")}
-            {fieldRow("Nom", patient?.user ? `${patient.user.name || ""} ${patient.user.surname || ""}` : "—")}
-            {fieldRow("Email", patient?.user?.email || "—")}
-            {fieldRow("Téléphone", patient?.user?.telephone || "—")}
-            {fieldRow("Groupe sanguin", dme?.groupe_sanguin || "—")}
           </div>
 
           {/* Colonne droite */}
           <div>
             {/* Détails consultation */}
             <div style={cardStyle}>
-              <div style={{ fontWeight: 1000, fontSize: 16 }}>
-                Consultation{" "}
-                {selectedConsultation
-                  ? `• ${formatDate(
-                      selectedConsultation?.date_consultation ||
-                        selectedConsultation?.created_at
-                    )}`
-                  : ""}
+              <div style={{ textAlign:"center"}}>
+                <div style={{ fontWeight: 1000, fontSize: 18, marginBottom: 60 }}>
+                  Dossier médical
+                </div>
               </div>
 
               {selectedConsultation ? (
                 <>
                   {sectionTitle("Motif / Diagnostic")}
                   {fieldRow("Motif", selectedConsultation?.motif || "—")}
-                  {fieldRow("Diagnostic", selectedConsultation?.diagnostic || "—")}
+                  {fieldRow(
+                    "Diagnostic",
+                    selectedConsultation?.diagnostic || "—",
+                  )}
 
                   {sectionTitle("Signes vitaux")}
                   {fieldRow("Poids", selectedConsultation?.poids ?? "—")}
                   {fieldRow("Taille", selectedConsultation?.taille ?? "—")}
                   {fieldRow(
                     "IMC",
-                    calcImc(selectedConsultation?.poids, selectedConsultation?.taille) ?? "—"
+                    calcImc(
+                      selectedConsultation?.poids,
+                      selectedConsultation?.taille,
+                    ) ?? "—",
                   )}
-                  {fieldRow("Température", selectedConsultation?.temperature ?? "—")}
-                  {fieldRow("Fréquence", selectedConsultation?.frequence_cardiaque ?? "—")}
-                  {fieldRow("Pression artérielle", selectedConsultation?.pression_arterielle ?? "—")}
+                  {fieldRow(
+                    "Température",
+                    selectedConsultation?.temperature ?? "—",
+                  )}
+                  {fieldRow(
+                    "Fréquence",
+                    selectedConsultation?.frequence_cardiaque ?? "—",
+                  )}
+                  {fieldRow(
+                    "Pression artérielle",
+                    selectedConsultation?.pression_arterielle ?? "—",
+                  )}
 
                   {sectionTitle("Observation")}
-                  <div style={{ color: "#111827", fontWeight: 700, whiteSpace: "pre-wrap" }}>
+                  <div
+                    style={{
+                      color: "#111827",
+                      fontWeight: 700,
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
                     {selectedConsultation?.observation ||
                       selectedConsultation?.observations ||
                       "—"}
                   </div>
 
                   {sectionTitle("Traitement")}
-                  <div style={{ color: "#111827", fontWeight: 700, whiteSpace: "pre-wrap" }}>
+                  <div
+                    style={{
+                      color: "#111827",
+                      fontWeight: 700,
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
                     {selectedConsultation?.traitement || "—"}
                   </div>
 
                   {sectionTitle("Analyses / Examens demandés")}
                   <div style={{ color: "#6b7280", fontWeight: 700 }}>
-                    (Les résultats se saisissent dans la section “Résultats en attente”.)
+                    (Les résultats se saisissent dans la section “Résultats en
+                    attente”.)
                   </div>
 
                   {/* Examens liés à la consultation (si le backend les charge via consultations.examens) */}
                   {Array.isArray(selectedConsultation?.examens) &&
                   selectedConsultation.examens.length > 0 ? (
                     <div style={{ marginTop: 10 }}>
-                      <div style={{ fontWeight: 900, marginBottom: 6 }}>
+                      <div style={{ fontWeight: 700, marginBottom: 6 }}>
                         Examens
                       </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 8,
+                        }}
+                      >
                         {selectedConsultation.examens.map((e) => (
                           <div
                             key={e.id}
@@ -573,15 +930,14 @@ export default function PatientDossier() {
                               padding: 10,
                             }}
                           >
-                            <div style={{ fontWeight: 900 }}>
+                            <div style={{ fontWeight: 700 }}>
                               {e?.type?.code
                                 ? `${e.type.code} — ${e.type.libelle}`
-                                : e?.type?.libelle || "—"}
-                              {" "}
+                                : e?.type?.libelle || "—"}{" "}
                               {pill(
                                 e?.etat || "en_attente",
                                 e?.etat === "termine" ? "#065f46" : "#92400e",
-                                e?.etat === "termine" ? "#d1fae5" : "#ffedd5"
+                                e?.etat === "termine" ? "#d1fae5" : "#ffedd5",
                               )}
                             </div>
                             <div
@@ -620,8 +976,11 @@ export default function PatientDossier() {
                 <div style={{ fontWeight: 1000, fontSize: 16 }}>
                   Résultats en attente
                 </div>
-                <div style={{ color: "#6b7280", fontWeight: 700, fontSize: 12 }}>
-                  (Saisie par médecin / infirmier quand le patient apporte le PDF)
+                <div
+                  style={{ color: "#6b7280", fontWeight: 700, fontSize: 12 }}
+                >
+                  (Saisie par médecin / infirmier quand le patient apporte le
+                  PDF)
                 </div>
               </div>
 
@@ -687,7 +1046,7 @@ export default function PatientDossier() {
                             style={{
                               padding: 10,
                               borderBottom: "1px solid #eef2f7",
-                              fontWeight: 900,
+                              fontWeight: 700,
                             }}
                           >
                             {a?.type_analyse?.libelle ||
@@ -724,7 +1083,7 @@ export default function PatientDossier() {
                             {actionsBtn(
                               "Enregistrer résultat",
                               () => openResultModal("analyse", a),
-                              busy
+                              busy,
                             )}
                           </td>
                         </tr>
@@ -796,7 +1155,7 @@ export default function PatientDossier() {
                             style={{
                               padding: 10,
                               borderBottom: "1px solid #eef2f7",
-                              fontWeight: 900,
+                              fontWeight: 700,
                             }}
                           >
                             {e?.type?.code
@@ -833,7 +1192,7 @@ export default function PatientDossier() {
                             {actionsBtn(
                               "Enregistrer résultat",
                               () => openResultModal("examen", e),
-                              busy
+                              busy,
                             )}
                           </td>
                         </tr>
@@ -902,22 +1261,14 @@ export default function PatientDossier() {
                       resultModal.item?.typeAnalyse?.libelle ||
                       "—"
                     : resultModal.item?.type?.code
-                    ? `${resultModal.item.type.code} — ${resultModal.item.type.libelle}`
-                    : resultModal.item?.type?.libelle || "—"}
+                      ? `${resultModal.item.type.code} — ${resultModal.item.type.libelle}`
+                      : resultModal.item?.type?.libelle || "—"}
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={closeResultModal}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  fontSize: 18,
-                  cursor: "pointer",
-                  color: "#6b7280",
-                  fontWeight: 900,
-                }}
                 aria-label="Fermer"
                 title="Fermer"
               >
@@ -926,13 +1277,22 @@ export default function PatientDossier() {
             </div>
 
             <div style={{ marginTop: 12 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 12,
+                }}
+              >
                 <div className="form-group">
                   <label className="form-label">Résultat (texte)</label>
                   <Input
                     value={resultModal.resultat}
                     onChange={(e) =>
-                      setResultModal((m) => ({ ...m, resultat: e.target.value }))
+                      setResultModal((m) => ({
+                        ...m,
+                        resultat: e.target.value,
+                      }))
                     }
                     placeholder="ex: Hb = 12.3 g/dL ..."
                   />
@@ -956,19 +1316,32 @@ export default function PatientDossier() {
                       borderRadius: 10,
                     }}
                   />
-                  <div style={{ color: "#6b7280", fontWeight: 700, fontSize: 12, marginTop: 4 }}>
+                  <div
+                    style={{
+                      color: "#6b7280",
+                      fontWeight: 700,
+                      fontSize: 12,
+                      marginTop: 4,
+                    }}
+                  >
                     PDF uniquement (10MB). Optionnel.
                   </div>
                 </div>
 
-                <div className="form-group" style={{ gridColumn: "1 / span 2" }}>
+                <div
+                  className="form-group"
+                  style={{ gridColumn: "1 / span 2" }}
+                >
                   <label className="form-label">Remarques</label>
                   <textarea
                     className="custom-input"
                     style={{ minHeight: 90, padding: 10, width: "100%" }}
                     value={resultModal.remarques}
                     onChange={(e) =>
-                      setResultModal((m) => ({ ...m, remarques: e.target.value }))
+                      setResultModal((m) => ({
+                        ...m,
+                        remarques: e.target.value,
+                      }))
                     }
                     placeholder="ex: contrôle dans 2 semaines ..."
                   />
@@ -976,20 +1349,34 @@ export default function PatientDossier() {
               </div>
 
               {resultModal.item?.result_file_path ? (
-                <div style={{ marginTop: 8, color: "#6b7280", fontWeight: 700, fontSize: 13 }}>
+                <div
+                  style={{
+                    marginTop: 8,
+                    color: "#6b7280",
+                    fontWeight: 700,
+                    fontSize: 13,
+                  }}
+                >
                   PDF actuel :{" "}
                   <a
                     href={fileUrlFromPath(resultModal.item.result_file_path)}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ color: "#2563eb", fontWeight: 900 }}
+                    style={{ color: "#2563eb", fontWeight: 700 }}
                   >
                     {resultModal.item.result_file_original_name || "Ouvrir"}
                   </a>
                 </div>
               ) : null}
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 12 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: 10,
+                  marginTop: 12,
+                }}
+              >
                 <button
                   type="button"
                   onClick={closeResultModal}
@@ -1000,7 +1387,7 @@ export default function PatientDossier() {
                     borderRadius: 10,
                     padding: "10px 14px",
                     cursor: resultModal.submitting ? "not-allowed" : "pointer",
-                    fontWeight: 900,
+                    fontWeight: 700,
                     opacity: resultModal.submitting ? 0.7 : 1,
                   }}
                   disabled={resultModal.submitting}
@@ -1019,7 +1406,7 @@ export default function PatientDossier() {
                     borderRadius: 10,
                     padding: "10px 14px",
                     cursor: resultModal.submitting ? "not-allowed" : "pointer",
-                    fontWeight: 900,
+                    fontWeight: 700,
                     opacity: resultModal.submitting ? 0.7 : 1,
                   }}
                 >

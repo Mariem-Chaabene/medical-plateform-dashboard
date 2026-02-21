@@ -303,42 +303,51 @@ export default function PatientDossier() {
     return byEndpoint.length ? byEndpoint : byEmbedded;
   }, [analyses, selectedConsultation]);
 
-  // ✅ Ordonnance: essayer plusieurs sources + dme.traitements filtrés par consultation
-  const ordonnanceItems = useMemo(() => {
-    const direct =
-      selectedConsultation?.ordonnance ||
-      selectedConsultation?.ordonnances ||
-      selectedConsultation?.prescriptions ||
-      selectedConsultation?.medicaments ||
-      selectedConsultation?.traitements ||
-      [];
+  // ✅ Ordonnance: on affiche les LIGNES (ordonnance_lignes) liées à la consultation
+const ordonnanceItems = useMemo(() => {
+  const cid = selectedConsultation?.id;
 
-    const directArr = Array.isArray(direct) ? direct : [];
+  // 1) Ordonnance rattachée directement à la consultation (hasOne) => objet { lignes: [...] }
+  const ordObj = selectedConsultation?.ordonnance || null;
+  const fromConsultation =
+    ordObj && Array.isArray(ordObj?.lignes) ? ordObj.lignes : [];
 
-    const dmeTraits = Array.isArray(dme?.traitements) ? dme.traitements : [];
-    const cid = selectedConsultation?.id;
-    const fromDme =
-      cid != null
-        ? dmeTraits.filter((t) =>
-            t?.consultation_id != null
-              ? String(t.consultation_id) === String(cid)
-              : false,
+  // 2) Ordonnances rattachées au DME (hasMany) => on filtre par consultation_id et on prend les lignes
+  const dmeOrds = Array.isArray(dme?.ordonnances) ? dme.ordonnances : [];
+  const fromDmeOrdonnances =
+    cid != null
+      ? dmeOrds
+          .filter((o) =>
+            o?.consultation_id != null
+              ? String(o.consultation_id) === String(cid)
+              : false
           )
-        : [];
+          .flatMap((o) => (Array.isArray(o?.lignes) ? o.lignes : []))
+      : [];
 
-    // merge simple
-    const merged = [...directArr, ...fromDme];
-    // remove duplicates by id if present
-    const seen = new Set();
-    const out = [];
-    for (const it of merged) {
-      const k = it?.id != null ? `id:${it.id}` : JSON.stringify(it);
-      if (seen.has(k)) continue;
-      seen.add(k);
-      out.push(it);
-    }
-    return out;
-  }, [selectedConsultation, dme]);
+  // 3) Fallback: anciens champs éventuels (si tu renvoies déjà une liste de médicaments ailleurs)
+  const directFallback =
+    selectedConsultation?.ordonnances ||
+    selectedConsultation?.prescriptions ||
+    selectedConsultation?.medicaments ||
+    selectedConsultation?.traitements ||
+    [];
+
+  const fallbackArr = Array.isArray(directFallback) ? directFallback : [];
+
+  // merge + remove duplicates
+  const merged = [...fromConsultation, ...fromDmeOrdonnances, ...fallbackArr];
+
+  const seen = new Set();
+  const out = [];
+  for (const it of merged) {
+    const k = it?.id != null ? `id:${it.id}` : JSON.stringify(it);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(it);
+  }
+  return out;
+}, [selectedConsultation, dme]);
 
   const load = async () => {
     if (!token || !patientId) return;
@@ -600,6 +609,9 @@ export default function PatientDossier() {
     const rowsHtml = ordonnanceItems
       .map((it, idx) => {
         const nom =
+          it?.medicament?.nom ||
+          it?.medicament?.libelle ||
+          it?.medicament?.name ||
           it?.medicament ||
           it?.nom ||
           it?.libelle ||
@@ -608,16 +620,14 @@ export default function PatientDossier() {
           it?.medicament_nom ||
           `Médicament ${idx + 1}`;
 
-        const pos =
-          it?.posologie ||
-          it?.dose ||
-          it?.dosage ||
-          it?.frequence ||
-          it?.instructions ||
-          "—";
+        // OrdonnanceLigne: dosage + frequence + instructions
+        const dosage = it?.dosage || it?.dose || it?.posologie || it?.dosage_mg || "";
+        const freq = it?.frequence || it?.frequency || "";
+        const instr = it?.instructions || it?.instruction || it?.note || it?.commentaire || "";
 
-        const duree = it?.duree || it?.duration || "—";
-        const note = it?.remarque || it?.note || it?.commentaire || "—";
+        const pos = [dosage, freq].filter(Boolean).join(" • ") || "";
+        const duree = it?.duree || it?.duration || "";
+        const note = instr || "";
 
         return `<tr>
           <td style="padding:8px;border-bottom:1px solid #e5e7eb;"><b>${nom}</b></td>
@@ -627,6 +637,7 @@ export default function PatientDossier() {
         </tr>`;
       })
       .join("");
+
 
     const dateCons =
       selectedConsultation?.date_consultation ||
@@ -660,7 +671,6 @@ export default function PatientDossier() {
                     <th style="padding:8px;border-bottom:2px solid #111827;">Médicament</th>
                     <th style="padding:8px;border-bottom:2px solid #111827;">Posologie</th>
                     <th style="padding:8px;border-bottom:2px solid #111827;">Durée</th>
-                    <th style="padding:8px;border-bottom:2px solid #111827;">Remarque</th>
                   </tr>
                 </thead>
                 <tbody>${rowsHtml}</tbody>
@@ -1498,8 +1508,8 @@ export default function PatientDossier() {
                       : "Aucune ordonnance"
                   }
                   style={{
-                    background: ordonnanceItems.length ? "#111827" : "#e5e7eb",
-                    color: ordonnanceItems.length ? "#fff" : "#6b7280",
+                    background: ordonnanceItems.length ? "#f3f4f6" : "#f3f4f6",
+                    color: ordonnanceItems.length ? "#9ca3af" : "#9ca3af",
                     border: "none",
                     borderRadius: 10,
                     padding: "8px 10px",
@@ -1511,7 +1521,7 @@ export default function PatientDossier() {
                     fontSize: 12,
                   }}
                 >
-                  {iconPrint} Imprimer
+                  {iconPrint}
                 </button>
               </div>
 
@@ -1529,37 +1539,41 @@ export default function PatientDossier() {
                         <th style={tableTh}>Médicament</th>
                         <th style={tableTh}>Posologie</th>
                         <th style={tableTh}>Durée</th>
-                        <th style={tableTh}>Remarque</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {ordonnanceItems.map((it, idx) => (
-                        <tr key={it?.id ?? idx}>
-                          <td style={tableTd}>
-                            {it?.medicament ||
-                              it?.nom ||
-                              it?.libelle ||
-                              it?.name ||
-                              it?.produit ||
-                              it?.medicament_nom ||
-                              "—"}
-                          </td>
-                          <td style={tableTd}>
-                            {it?.posologie ||
-                              it?.dose ||
-                              it?.dosage ||
-                              it?.frequence ||
-                              it?.instructions ||
-                              "—"}
-                          </td>
-                          <td style={tableTd}>
-                            {it?.duree || it?.duration || "—"}
-                          </td>
-                          <td style={tableTd}>
-                            {it?.remarque || it?.note || it?.commentaire || "—"}
-                          </td>
-                        </tr>
-                      ))}
+                      {ordonnanceItems.map((it, idx) => {
+                        const nom =
+                          it?.medicament?.nom ||
+                          it?.medicament?.libelle ||
+                          it?.medicament?.name ||
+                          it?.medicament ||
+                          it?.nom ||
+                          it?.libelle ||
+                          it?.name ||
+                          it?.produit ||
+                          it?.medicament_nom ||
+                          "";
+
+                        const dosage = it?.dosage || it?.dose || it?.posologie || "";
+                        const freq = it?.frequence || it?.frequency || "";
+                        const pos = [dosage, freq].filter(Boolean).join(" • ") || "";
+                        const duree = it?.duree || it?.duration || "";
+                        const note =
+                          it?.instructions ||
+                          it?.instruction ||
+                          it?.note ||
+                          it?.commentaire ||
+                          "";
+
+                        return (
+                          <tr key={it?.id ?? idx}>
+                            <td style={tableTd}>{nom}</td>
+                            <td style={tableTd}>{pos}</td>
+                            <td style={tableTd}>{duree}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

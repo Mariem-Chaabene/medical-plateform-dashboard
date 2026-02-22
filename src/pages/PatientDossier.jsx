@@ -3,6 +3,8 @@ import { Navigate, useNavigate, useParams } from "react-router-dom";
 import Layout from "../components/Layout";
 import Input from "../components/ui/Input/Input";
 import { useAuth } from "../context/AuthContext";
+import OrdonnanceDocument from "../components/ordonnance/OrdonnanceDocument";
+import "../components/ordonnance/OrdonnanceDocument.css";
 
 const BASE = "http://127.0.0.1:8000";
 const API = `${BASE}/api`;
@@ -70,9 +72,7 @@ function getAgeFromPatient(patient) {
 
 const iconTrash = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    {/* background */}
     <rect x="0" y="0" width="24" height="24" rx="10" fill="#f3f4f6" />
-    {/* icon */}
     <path d="M3 6h18" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" />
     <path d="M8 6V4h8v2" stroke="#9ca3af" strokeWidth="2" strokeLinejoin="round" />
     <path d="M7 6l1 14h8l1-14" stroke="#9ca3af" strokeWidth="2" strokeLinejoin="round" />
@@ -80,38 +80,14 @@ const iconTrash = (
     <path d="M14 11v6" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" />
   </svg>
 );
+
 const iconPrint = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-    <path
-      d="M7 8V4h10v4"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M7 17h10v3H7v-3z"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M6 9h12a2 2 0 012 2v5h-3"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M4 16H3v-5a2 2 0 012-2"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M17 12h.01"
-      stroke="currentColor"
-      strokeWidth="3"
-      strokeLinecap="round"
-    />
+    <path d="M7 8V4h10v4" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    <path d="M7 17h10v3H7v-3z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    <path d="M6 9h12a2 2 0 012 2v5h-3" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    <path d="M4 16H3v-5a2 2 0 012-2" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    <path d="M17 12h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
   </svg>
 );
 
@@ -129,55 +105,22 @@ const iconBack = (
 
 const iconInfo = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-    <path
-      d="M12 2a10 10 0 100 20 10 10 0 000-20z"
-      stroke="currentColor"
-      strokeWidth="2"
-    />
-    <path
-      d="M12 10v7"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
-    <path
-      d="M12 7h.01"
-      stroke="currentColor"
-      strokeWidth="3"
-      strokeLinecap="round"
-    />
+    <path d="M12 2a10 10 0 100 20 10 10 0 000-20z" stroke="currentColor" strokeWidth="2" />
+    <path d="M12 10v7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M12 7h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
   </svg>
 );
 
 const iconUpload = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
     <path d="M12 3v10" stroke="#b2b2b2" strokeWidth="2" strokeLinecap="round" />
-    <path
-      d="M8 7l4-4 4 4"
-      stroke="#b2b2b2"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M4 14v6h16v-6"
-      stroke="#b2b2b2"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+    <path d="M8 7l4-4 4 4" stroke="#b2b2b2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M4 14v6h16v-6" stroke="#b2b2b2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
 const iconEdit = (
-  <svg
-    width="20"
-    height="20"
-    fill="none"
-    stroke="#b2b2b2"
-    strokeWidth="2"
-    viewBox="0 0 24 24"
-  >
+  <svg width="20" height="20" fill="none" stroke="#b2b2b2" strokeWidth="2" viewBox="0 0 24 24">
     <path d="M12 20h9" />
     <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
   </svg>
@@ -191,12 +134,7 @@ const iconFile = (
       strokeWidth="2"
       strokeLinejoin="round"
     />
-    <path
-      d="M14 2v6h6"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinejoin="round"
-    />
+    <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
   </svg>
 );
 
@@ -221,18 +159,21 @@ export default function PatientDossier() {
 
   const [patientDrawerOpen, setPatientDrawerOpen] = useState(false);
 
-  // mode: "edit" | "view"
+  const [consultationMedecin, setConsultationMedecin] = useState(null);
+
   const [resultModal, setResultModal] = useState({
     open: false,
     mode: "edit",
-    kind: null, // "analyse" | "examen"
+    kind: null,
     item: null,
     resultat: "",
     remarques: "",
     file: null,
-    removeExistingFile: false, // ✅ nouveau : demander suppression du PDF existant (si BE le supporte)
+    removeExistingFile: false,
     submitting: false,
   });
+
+  const [printingOrdonnance, setPrintingOrdonnance] = useState(false);
 
   const authHeaders = useMemo(() => {
     return {
@@ -242,25 +183,39 @@ export default function PatientDossier() {
   }, [token]);
 
   const pendingAnalyses = useMemo(() => {
-    return (analyses || []).filter(
-      (a) => (a?.etat || "en_attente") === "en_attente",
-    );
+    return (analyses || []).filter((a) => (a?.etat || "en_attente") === "en_attente");
   }, [analyses]);
 
   const pendingExamens = useMemo(() => {
-    return (examens || []).filter(
-      (e) => (e?.etat || "en_attente") === "en_attente",
-    );
+    return (examens || []).filter((e) => (e?.etat || "en_attente") === "en_attente");
   }, [examens]);
 
   const selectedConsultation = useMemo(() => {
     if (!selectedConsultationId) return consultations?.[0] || null;
-    return (
-      consultations.find(
-        (c) => String(c.id) === String(selectedConsultationId),
-      ) || null
-    );
+    return consultations.find((c) => String(c.id) === String(selectedConsultationId)) || null;
   }, [consultations, selectedConsultationId]);
+
+  // ✅ date ordonnance (après selectedConsultation)
+  const dateOrdonnanceForDoc = useMemo(() => {
+    return (
+      selectedConsultation?.ordonnance?.date_ordonnance ||
+      selectedConsultation?.date_consultation ||
+      selectedConsultation?.created_at ||
+      selectedConsultation?.date ||
+      new Date().toISOString()
+    );
+  }, [selectedConsultation]);
+
+  const medecinForDoc = useMemo(() => {
+    const m = consultationMedecin;
+    const u = m?.user || m || {};
+    return {
+      user: {
+        name: u?.name || u?.prenom || u?.first_name || u?.firstName || "",
+        surname: u?.surname || u?.nom || u?.last_name || u?.lastName || "",
+      },
+    };
+  }, [consultationMedecin]);
 
   const antecedents = useMemo(() => {
     const a =
@@ -277,14 +232,10 @@ export default function PatientDossier() {
     const cid = selectedConsultation?.id;
     const byEndpoint = Array.isArray(examens)
       ? examens.filter((e) =>
-          cid != null && e?.consultation_id != null
-            ? String(e.consultation_id) === String(cid)
-            : false,
+          cid != null && e?.consultation_id != null ? String(e.consultation_id) === String(cid) : false
         )
       : [];
-    const byEmbedded = Array.isArray(selectedConsultation?.examens)
-      ? selectedConsultation.examens
-      : [];
+    const byEmbedded = Array.isArray(selectedConsultation?.examens) ? selectedConsultation.examens : [];
     return byEndpoint.length ? byEndpoint : byEmbedded;
   }, [examens, selectedConsultation]);
 
@@ -292,62 +243,63 @@ export default function PatientDossier() {
     const cid = selectedConsultation?.id;
     const byEndpoint = Array.isArray(analyses)
       ? analyses.filter((a) =>
-          cid != null && a?.consultation_id != null
-            ? String(a.consultation_id) === String(cid)
-            : false,
+          cid != null && a?.consultation_id != null ? String(a.consultation_id) === String(cid) : false
         )
       : [];
-    const byEmbedded = Array.isArray(selectedConsultation?.analyses)
-      ? selectedConsultation.analyses
-      : [];
+    const byEmbedded = Array.isArray(selectedConsultation?.analyses) ? selectedConsultation.analyses : [];
     return byEndpoint.length ? byEndpoint : byEmbedded;
   }, [analyses, selectedConsultation]);
 
-  // ✅ Ordonnance: on affiche les LIGNES (ordonnance_lignes) liées à la consultation
-const ordonnanceItems = useMemo(() => {
-  const cid = selectedConsultation?.id;
+  const ordonnanceItems = useMemo(() => {
+    const cid = selectedConsultation?.id;
 
-  // 1) Ordonnance rattachée directement à la consultation (hasOne) => objet { lignes: [...] }
-  const ordObj = selectedConsultation?.ordonnance || null;
-  const fromConsultation =
-    ordObj && Array.isArray(ordObj?.lignes) ? ordObj.lignes : [];
+    const ordObj = selectedConsultation?.ordonnance || null;
+    const fromConsultation = ordObj && Array.isArray(ordObj?.lignes) ? ordObj.lignes : [];
 
-  // 2) Ordonnances rattachées au DME (hasMany) => on filtre par consultation_id et on prend les lignes
-  const dmeOrds = Array.isArray(dme?.ordonnances) ? dme.ordonnances : [];
-  const fromDmeOrdonnances =
-    cid != null
-      ? dmeOrds
-          .filter((o) =>
-            o?.consultation_id != null
-              ? String(o.consultation_id) === String(cid)
-              : false
-          )
-          .flatMap((o) => (Array.isArray(o?.lignes) ? o.lignes : []))
-      : [];
+    const dmeOrds = Array.isArray(dme?.ordonnances) ? dme.ordonnances : [];
+    const fromDmeOrdonnances =
+      cid != null
+        ? dmeOrds
+            .filter((o) => (o?.consultation_id != null ? String(o.consultation_id) === String(cid) : false))
+            .flatMap((o) => (Array.isArray(o?.lignes) ? o.lignes : []))
+        : [];
 
-  // 3) Fallback: anciens champs éventuels (si tu renvoies déjà une liste de médicaments ailleurs)
-  const directFallback =
-    selectedConsultation?.ordonnances ||
-    selectedConsultation?.prescriptions ||
-    selectedConsultation?.medicaments ||
-    selectedConsultation?.traitements ||
-    [];
+    const directFallback =
+      selectedConsultation?.ordonnances ||
+      selectedConsultation?.prescriptions ||
+      selectedConsultation?.medicaments ||
+      selectedConsultation?.traitements ||
+      [];
 
-  const fallbackArr = Array.isArray(directFallback) ? directFallback : [];
+    const fallbackArr = Array.isArray(directFallback) ? directFallback : [];
 
-  // merge + remove duplicates
-  const merged = [...fromConsultation, ...fromDmeOrdonnances, ...fallbackArr];
+    const merged = [...fromConsultation, ...fromDmeOrdonnances, ...fallbackArr];
 
-  const seen = new Set();
-  const out = [];
-  for (const it of merged) {
-    const k = it?.id != null ? `id:${it.id}` : JSON.stringify(it);
-    if (seen.has(k)) continue;
-    seen.add(k);
-    out.push(it);
-  }
-  return out;
-}, [selectedConsultation, dme]);
+    const seen = new Set();
+    const out = [];
+    for (const it of merged) {
+      const k = it?.id != null ? `id:${it.id}` : JSON.stringify(it);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(it);
+    }
+    return out;
+  }, [selectedConsultation, dme]);
+
+  const lignesForDoc = useMemo(() => {
+    return (ordonnanceItems || []).map((l) => {
+      const medLabel = l?.medicament?.nom || l?.medicament?.libelle || "";
+      return {
+        ...l,
+        libelle: l?.libelle || medLabel,
+        medicament: {
+          ...l?.medicament,
+          nom: l?.medicament?.nom || l?.medicament?.libelle || "",
+        },
+        posologie: [l?.dosage, l?.frequence, l?.instructions].filter(Boolean).join(" • "),
+      };
+    });
+  }, [ordonnanceItems]);
 
   const load = async () => {
     if (!token || !patientId) return;
@@ -356,21 +308,14 @@ const ordonnanceItems = useMemo(() => {
       setLoading(true);
       setError("");
 
-      const resP = await fetch(`${API}/patients/${patientId}`, {
-        headers: authHeaders,
-      });
+      const resP = await fetch(`${API}/patients/${patientId}`, { headers: authHeaders });
       const txtP = await resP.text();
       if (!resP.ok) throw new Error("Impossible de charger le patient.");
       const p = safeJsonParse(txtP);
       setPatient(p);
 
       const maybeDmeId =
-        p?.dme_id ||
-        p?.dme?.id ||
-        p?.dossier?.id ||
-        p?.data?.dme_id ||
-        p?.data?.dme?.id ||
-        null;
+        p?.dme_id || p?.dme?.id || p?.dossier?.id || p?.data?.dme_id || p?.data?.dme?.id || null;
 
       if (!maybeDmeId) {
         setDmeId(null);
@@ -381,25 +326,19 @@ const ordonnanceItems = useMemo(() => {
         setSelectedConsultationId(null);
         return;
       }
+
       setDmeId(maybeDmeId);
 
-      const resD = await fetch(`${API}/dmes/${maybeDmeId}`, {
-        headers: authHeaders,
-      });
+      const resD = await fetch(`${API}/dmes/${maybeDmeId}`, { headers: authHeaders });
       const txtD = await resD.text();
-      if (!resD.ok)
-        throw new Error("Impossible de charger le dossier médical (DME).");
+      if (!resD.ok) throw new Error("Impossible de charger le dossier médical (DME).");
       const d = safeJsonParse(txtD);
       setDme(d);
 
       const cons = Array.isArray(d?.consultations) ? d.consultations : [];
       cons.sort((a, b) => {
-        const da = new Date(
-          a?.created_at || a?.date || a?.date_consultation || 0,
-        ).getTime();
-        const db = new Date(
-          b?.created_at || b?.date || b?.date_consultation || 0,
-        ).getTime();
+        const da = new Date(a?.created_at || a?.date || a?.date_consultation || 0).getTime();
+        const db = new Date(b?.created_at || b?.date || b?.date_consultation || 0).getTime();
         return db - da;
       });
 
@@ -427,6 +366,30 @@ const ordonnanceItems = useMemo(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, patientId]);
+
+  // ✅ load médecin depuis consultation (medecin_id)
+  useEffect(() => {
+    const id = selectedConsultation?.medecin_id || selectedConsultation?.ordonnance?.medecin_id || null;
+
+    if (!token || !id) {
+      setConsultationMedecin(null);
+      return;
+    }
+
+    (async () => {
+      try {
+        const res = await fetch(`${API}/medecins/${id}`, {
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        });
+        const txt = await res.text();
+        if (!res.ok) throw new Error(txt || "Erreur chargement médecin");
+        setConsultationMedecin(safeJsonParse(txt) || null);
+      } catch (e) {
+        console.error("load medecin error:", e);
+        setConsultationMedecin(null);
+      }
+    })();
+  }, [token, selectedConsultation]);
 
   const openEditResultModal = (kind, item) => {
     setError("");
@@ -485,7 +448,6 @@ const ordonnanceItems = useMemo(() => {
         throw new Error("Erreur lors de la suppression du PDF.");
       }
 
-      // ✅ Met à jour l'item affiché dans le modal (sans fermer)
       setResultModal((m) => ({
         ...m,
         item: {
@@ -499,7 +461,6 @@ const ordonnanceItems = useMemo(() => {
         removeExistingFile: false,
       }));
 
-      // ✅ Refresh tableaux (examens/analyses)
       await load();
     } catch (e) {
       setError(e?.message || "Erreur réseau.");
@@ -509,9 +470,8 @@ const ordonnanceItems = useMemo(() => {
   };
 
   const submitResult = async () => {
-    const { kind, item, resultat, remarques, file, mode, removeExistingFile } =
-      resultModal;
-    if (mode === "view") return; // sécurité
+    const { kind, item, resultat, remarques, file, mode, removeExistingFile } = resultModal;
+    if (mode === "view") return;
     if (!kind || !item?.id) return;
 
     const hasText = String(resultat || "").trim() !== "";
@@ -523,20 +483,11 @@ const ordonnanceItems = useMemo(() => {
       return;
     }
 
-    // petit garde-fou UI
-    if (removeExistingFile && hasFile) {
-      // pas forcément une erreur, mais c’est ambigu : supprimer et upload en même temps
-      // on choisit : upload remplace
-      // donc on désactive suppression si un nouveau fichier est choisi
-      // (ou laisser tel quel, mais ici on corrige proprement)
-    }
-
     try {
       setResultModal((m) => ({ ...m, submitting: true }));
       setBusy(true);
       setError("");
 
-      // 1) upload si nouveau fichier choisi
       if (hasFile) {
         const fd = new FormData();
         fd.append("file", file);
@@ -554,7 +505,6 @@ const ordonnanceItems = useMemo(() => {
         }
       }
 
-      // 2) update texte + éventuellement "détacher" fichier existant si demandé
       if (hasText || hasRem || removeExistingFile) {
         const payload = {
           resultat: hasText ? resultat.trim() : null,
@@ -576,18 +526,7 @@ const ordonnanceItems = useMemo(() => {
         if (!putRes.ok) {
           console.error("update result error:", putRes.status, putTxt);
           const maybe = safeJsonParse(putTxt);
-
-          // message plus clair si suppression demandée
-          if (removeExistingFile && !hasFile) {
-            throw new Error(
-              maybe?.message ||
-                "Le backend ne supporte pas la suppression du PDF via PUT. Ajoute un endpoint DELETE ou un champ clear_file côté serveur.",
-            );
-          }
-
-          throw new Error(
-            maybe?.message || "Erreur lors de l’enregistrement du résultat.",
-          );
+          throw new Error(maybe?.message || "Erreur lors de l’enregistrement du résultat.");
         }
       }
 
@@ -602,104 +541,28 @@ const ordonnanceItems = useMemo(() => {
   };
 
   const printOrdonnance = () => {
-    const title = "Ordonnance";
-    const w = window.open("", "_blank", "width=900,height=700");
-    if (!w) return;
-
-    const rowsHtml = ordonnanceItems
-      .map((it, idx) => {
-        const nom =
-          it?.medicament?.nom ||
-          it?.medicament?.libelle ||
-          it?.medicament?.name ||
-          it?.medicament ||
-          it?.nom ||
-          it?.libelle ||
-          it?.name ||
-          it?.produit ||
-          it?.medicament_nom ||
-          `Médicament ${idx + 1}`;
-
-        // OrdonnanceLigne: dosage + frequence + instructions
-        const dosage = it?.dosage || it?.dose || it?.posologie || it?.dosage_mg || "";
-        const freq = it?.frequence || it?.frequency || "";
-        const instr = it?.instructions || it?.instruction || it?.note || it?.commentaire || "";
-
-        const pos = [dosage, freq].filter(Boolean).join(" • ") || "";
-        const duree = it?.duree || it?.duration || "";
-        const note = instr || "";
-
-        return `<tr>
-          <td style="padding:8px;border-bottom:1px solid #e5e7eb;"><b>${nom}</b></td>
-          <td style="padding:8px;border-bottom:1px solid #e5e7eb;">${pos}</td>
-          <td style="padding:8px;border-bottom:1px solid #e5e7eb;">${duree}</td>
-          <td style="padding:8px;border-bottom:1px solid #e5e7eb;">${note}</td>
-        </tr>`;
-      })
-      .join("");
-
-
-    const dateCons =
-      selectedConsultation?.date_consultation ||
-      selectedConsultation?.created_at ||
-      selectedConsultation?.date ||
-      null;
-
-    const patientNameLocal = patient?.user?.name
-      ? `${patient.user.name || ""} ${patient.user.surname || ""}`.trim()
-      : `Patient #${patientId}`;
-
-    w.document.write(`
-      <html>
-        <head>
-          <title>${title}</title>
-          <meta charset="utf-8" />
-        </head>
-        <body style="font-family: Arial, sans-serif; padding: 20px;">
-          <h2 style="margin:0 0 6px 0;">${title}</h2>
-          <div style="color:#6b7280; font-size: 13px; margin-bottom: 14px;">
-            Patient: <b>${patientNameLocal}</b>
-            ${dateCons ? ` • Consultation: <b>${formatDate(dateCons)}</b>` : ""}
-          </div>
-
-          ${
-            ordonnanceItems.length
-              ? `
-              <table style="width:100%; border-collapse:collapse; font-size: 13px;">
-                <thead>
-                  <tr style="text-align:left;">
-                    <th style="padding:8px;border-bottom:2px solid #111827;">Médicament</th>
-                    <th style="padding:8px;border-bottom:2px solid #111827;">Posologie</th>
-                    <th style="padding:8px;border-bottom:2px solid #111827;">Durée</th>
-                  </tr>
-                </thead>
-                <tbody>${rowsHtml}</tbody>
-              </table>
-            `
-              : `<div>Aucune ordonnance.</div>`
-          }
-
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(() => window.close(), 200);
-            };
-          </script>
-        </body>
-      </html>
-    `);
-    w.document.close();
+    if (!ordonnanceItems.length) return;
+    setPrintingOrdonnance(true);
   };
 
+  useEffect(() => {
+    if (!printingOrdonnance) return;
+
+    const onAfterPrint = () => setPrintingOrdonnance(false);
+    window.addEventListener("afterprint", onAfterPrint);
+
+    const t = setTimeout(() => {
+      window.print();
+    }, 50);
+
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("afterprint", onAfterPrint);
+    };
+  }, [printingOrdonnance]);
+
   const fieldRow = (label, value) => (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "170px 1fr",
-        gap: 10,
-        padding: "6px 0",
-      }}
-    >
+    <div style={{ display: "grid", gridTemplateColumns: "170px 1fr", gap: 10, padding: "6px 0" }}>
       <div style={{ color: "#6b7280", fontWeight: 600 }}>{label}</div>
       <div style={{ fontWeight: 700, color: "#111827" }}>{value ?? "—"}</div>
     </div>
@@ -713,29 +576,11 @@ const ordonnanceItems = useMemo(() => {
   };
 
   const sectionTitle = (t) => (
-    <div
-      style={{
-        marginTop: 16,
-        marginBottom: 8,
-        fontWeight: 700,
-        color: "#111827",
-      }}
-    >
-      {t}
-    </div>
+    <div style={{ marginTop: 16, marginBottom: 8, fontWeight: 700, color: "#111827" }}>{t}</div>
   );
 
   const pill = (text, color = "#6b7280", bg = "#f3f4f6") => (
-    <span
-      style={{
-        background: bg,
-        color,
-        fontWeight: 700,
-        fontSize: 12,
-        padding: "4px 10px",
-        borderRadius: 999,
-      }}
-    >
+    <span style={{ background: bg, color, fontWeight: 700, fontSize: 12, padding: "4px 10px", borderRadius: 999 }}>
       {text}
     </span>
   );
@@ -768,8 +613,8 @@ const ordonnanceItems = useMemo(() => {
       onClick={onClick}
       disabled={disabled}
       style={{
-        background: disabled ? "#f3f4f6" : "#f3f4f6",
-        color: disabled ? "#9ca3af" : "#9ca3af",
+        background: "#f3f4f6",
+        color: "#9ca3af",
         border: "none",
         borderRadius: 10,
         width: 34,
@@ -786,20 +631,8 @@ const ordonnanceItems = useMemo(() => {
 
   const drawerLabelValue = (label, value) => (
     <div style={{ marginBottom: 12 }}>
-      <div
-        style={{
-          fontSize: 12,
-          fontWeight: 700,
-          color: "rgba(255,255,255,0.72)",
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginTop: 2 }}
-      >
-        {value ?? "—"}
-      </div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.72)" }}>{label}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginTop: 2 }}>{value ?? "—"}</div>
     </div>
   );
 
@@ -831,7 +664,20 @@ const ordonnanceItems = useMemo(() => {
 
   return (
     <Layout>
-      {/* Drawer (Infos patient) — sans overlay/backdrop */}
+      {/* zone d'impression */}
+      {printingOrdonnance ? (
+        <div className="print-area">
+          <OrdonnanceDocument
+            patient={patient}
+            medecin={medecinForDoc}
+            cabinet={selectedConsultation?.cabinet || dme?.cabinet || null}
+            lignes={lignesForDoc}
+            dateOrdonnance={dateOrdonnanceForDoc}
+          />
+        </div>
+      ) : null}
+
+      {/* Drawer infos patient */}
       <div
         aria-hidden={!patientDrawerOpen}
         style={{
@@ -849,7 +695,6 @@ const ordonnanceItems = useMemo(() => {
           pointerEvents: patientDrawerOpen ? "auto" : "none",
         }}
       >
-        {/* Header */}
         <div
           style={{
             padding: 16,
@@ -860,14 +705,7 @@ const ordonnanceItems = useMemo(() => {
             gap: 10,
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              minWidth: 0,
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
             <div
               style={{
                 width: 42,
@@ -888,24 +726,10 @@ const ordonnanceItems = useMemo(() => {
             </div>
 
             <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontWeight: 1000,
-                  color: "#fff",
-                  fontSize: 14,
-                  lineHeight: 1.1,
-                }}
-              >
+              <div style={{ fontWeight: 1000, color: "#fff", fontSize: 14, lineHeight: 1.1 }}>
                 {patientName}
               </div>
-              <div
-                style={{
-                  color: "rgba(255,255,255,0.70)",
-                  fontWeight: 600,
-                  fontSize: 12,
-                  marginTop: 4,
-                }}
-              >
+              <div style={{ color: "rgba(255,255,255,0.70)", fontWeight: 600, fontSize: 12, marginTop: 4 }}>
                 {patientAge != null ? `${patientAge} ans` : "Âge —"}
                 {dmeId ? ` • DME #${dmeId}` : ""}
               </div>
@@ -935,7 +759,6 @@ const ordonnanceItems = useMemo(() => {
           </button>
         </div>
 
-        {/* Content */}
         <div style={{ padding: 16, overflowY: "auto" }}>
           <div
             style={{
@@ -945,10 +768,7 @@ const ordonnanceItems = useMemo(() => {
               padding: 14,
             }}
           >
-            <div style={{ fontWeight: 1000, color: "#fff", marginBottom: 10 }}>
-              Informations
-            </div>
-
+            <div style={{ fontWeight: 1000, color: "#fff", marginBottom: 10 }}>Informations</div>
             {drawerLabelValue("Nom", patientName)}
             {drawerLabelValue("Email", patient?.user?.email || "—")}
             {drawerLabelValue("Téléphone", patient?.user?.telephone || "—")}
@@ -965,54 +785,22 @@ const ordonnanceItems = useMemo(() => {
               padding: 14,
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 10,
-                alignItems: "center",
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
               <div style={{ fontWeight: 1000, color: "#fff" }}>Historique</div>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "rgba(255,255,255,0.70)",
-                }}
-              >
+              <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.70)" }}>
                 {consultations.length} consultation(s)
               </div>
             </div>
 
-            <div
-              style={{
-                marginTop: 10,
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-              }}
-            >
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
               {consultations.length === 0 ? (
-                <div
-                  style={{
-                    color: "rgba(255,255,255,0.70)",
-                    fontWeight: 600,
-                    fontSize: 12,
-                  }}
-                >
+                <div style={{ color: "rgba(255,255,255,0.70)", fontWeight: 600, fontSize: 12 }}>
                   Aucune consultation.
                 </div>
               ) : (
                 consultations.map((c) => {
-                  const selected =
-                    String(c.id) === String(selectedConsultation?.id);
-                  const d =
-                    c?.date_consultation ||
-                    c?.date ||
-                    c?.created_at ||
-                    c?.updated_at ||
-                    null;
+                  const selected = String(c.id) === String(selectedConsultation?.id);
+                  const d = c?.date_consultation || c?.date || c?.created_at || c?.updated_at || null;
 
                   return (
                     <button
@@ -1024,12 +812,8 @@ const ordonnanceItems = useMemo(() => {
                       }}
                       style={{
                         textAlign: "left",
-                        border: selected
-                          ? "1px solid rgba(72,198,239,0.55)"
-                          : "1px solid rgba(255,255,255,0.10)",
-                        background: selected
-                          ? "rgba(72,198,239,0.10)"
-                          : "rgba(0,0,0,0.15)",
+                        border: selected ? "1px solid rgba(72,198,239,0.55)" : "1px solid rgba(255,255,255,0.10)",
+                        background: selected ? "rgba(72,198,239,0.10)" : "rgba(0,0,0,0.15)",
                         borderRadius: 14,
                         padding: 10,
                         cursor: "pointer",
@@ -1038,13 +822,7 @@ const ordonnanceItems = useMemo(() => {
                     >
                       <div style={{ fontWeight: 1000, fontSize: 12 }}>
                         {formatDate(d)}
-                        <span
-                          style={{
-                            marginLeft: 8,
-                            fontWeight: 700,
-                            color: "rgba(238, 45, 45, 0.7)",
-                          }}
-                        >
+                        <span style={{ marginLeft: 8, fontWeight: 700, color: "rgba(238, 45, 45, 0.7)" }}>
                           • {String(c?.motif || "").trim() ? c.motif : "—"}
                         </span>
                       </div>
@@ -1057,16 +835,8 @@ const ordonnanceItems = useMemo(() => {
         </div>
       </div>
 
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          marginBottom: 12,
-        }}
-      >
+      {/* Header page */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
             type="button"
@@ -1089,15 +859,7 @@ const ordonnanceItems = useMemo(() => {
           </button>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            gap: 10,
-            alignItems: "center",
-            flexWrap: "wrap",
-            justifyContent: "flex-end",
-          }}
-        >
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
           <button
             type="button"
             onClick={() => setPatientDrawerOpen(true)}
@@ -1116,34 +878,22 @@ const ordonnanceItems = useMemo(() => {
             }}
             title="Afficher les informations du patient"
           >
-            <span style={{ display: "inline-flex", color: "#fff" }}>
-              {iconInfo}
-            </span>
+            <span style={{ display: "inline-flex", color: "#fff" }}>{iconInfo}</span>
             Infos
           </button>
 
           {pendingAnalyses.length + pendingExamens.length > 0
-            ? pill(
-                `${pendingAnalyses.length + pendingExamens.length} résultat(s) en attente`,
-                "#92400e",
-                "#ffedd5",
-              )
+            ? pill(`${pendingAnalyses.length + pendingExamens.length} résultat(s) en attente`, "#92400e", "#ffedd5")
             : pill("Aucun résultat en attente", "#065f46", "#d1fae5")}
         </div>
       </div>
 
       {loading && <div>Chargement...</div>}
-      {error && (
-        <div style={{ color: "red", fontWeight: 700, marginBottom: 12 }}>
-          {error}
-        </div>
-      )}
+      {error && <div style={{ color: "red", fontWeight: 700, marginBottom: 12 }}>{error}</div>}
 
       {!loading && !dmeId && (
         <div style={cardStyle}>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>
-            Aucun DME trouvé
-          </div>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>Aucun DME trouvé</div>
           <div style={{ color: "#6b7280", fontWeight: 700 }}>
             Ce patient n’a pas encore de dossier médical dans le système.
           </div>
@@ -1151,25 +901,15 @@ const ordonnanceItems = useMemo(() => {
       )}
 
       {!loading && dmeId && (
-        <div
-          style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 14 }}
-        >
+        <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 14 }}>
           {/* Colonne gauche */}
           <div style={{ ...cardStyle, height: "fit-content" }}>
             {consultations.length === 0 ? (
-              <div style={{ color: "#6b7280", fontWeight: 700 }}>
-                Aucune consultation.
-              </div>
+              <div style={{ color: "#6b7280", fontWeight: 700 }}>Aucune consultation.</div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {consultations.map((c) => {
-                  const d =
-                    c?.date_consultation ||
-                    c?.date ||
-                    c?.created_at ||
-                    c?.updated_at ||
-                    null;
-
+                  const d = c?.date_consultation || c?.date || c?.created_at || c?.updated_at || null;
                   return (
                     <button
                       key={c.id}
@@ -1185,9 +925,7 @@ const ordonnanceItems = useMemo(() => {
                         cursor: "pointer",
                       }}
                     >
-                      <div style={{ fontWeight: 1000, fontSize: 13 }}>
-                        Consultation le {formatDate(d)}
-                      </div>
+                      <div style={{ fontWeight: 1000, fontSize: 13 }}>Consultation le {formatDate(d)}</div>
                     </button>
                   );
                 })}
@@ -1197,393 +935,279 @@ const ordonnanceItems = useMemo(() => {
 
           {/* Colonne droite */}
           <div>
-            <div style={cardStyle}>
-              <div style={{ textAlign: "center" }}>
-                <div
-                  style={{ fontWeight: 1000, fontSize: 18, marginBottom: 20 }}
-                >
-                  Dossier médical
-                </div>
-              </div>
-
-              {selectedConsultation ? (
-                <>
-                  {sectionTitle("Motif / Diagnostic")}
-                  {fieldRow("Motif", selectedConsultation?.motif || "—")}
-                  {fieldRow(
-                    "Diagnostic",
-                    selectedConsultation?.diagnostic || "—",
-                  )}
-
-                  {sectionTitle("Signes vitaux")}
-                  {fieldRow("Poids", selectedConsultation?.poids ?? "—")}
-                  {fieldRow("Taille", selectedConsultation?.taille ?? "—")}
-                  {fieldRow(
-                    "IMC",
-                    calcImc(
-                      selectedConsultation?.poids,
-                      selectedConsultation?.taille,
-                    ) ?? "—",
-                  )}
-                  {fieldRow(
-                    "Température",
-                    selectedConsultation?.temperature ?? "—",
-                  )}
-                  {fieldRow(
-                    "Fréquence",
-                    selectedConsultation?.frequence_cardiaque ?? "—",
-                  )}
-                  {fieldRow(
-                    "Pression artérielle",
-                    selectedConsultation?.pression_arterielle ?? "—",
-                  )}
-
-                  {sectionTitle("Observation")}
-                  <div
-                    style={{
-                      color: "#111827",
-                      fontWeight: 700,
-                      whiteSpace: "pre-wrap",
-                    }}
-                  >
-                    {selectedConsultation?.observation ||
-                      selectedConsultation?.observations ||
-                      "—"}
-                  </div>
-
-                  {sectionTitle("Traitement")}
-                  <div
-                    style={{
-                      color: "#111827",
-                      fontWeight: 700,
-                      whiteSpace: "pre-wrap",
-                    }}
-                  >
-                    {selectedConsultation?.traitement || "—"}
-                  </div>
-                </>
-              ) : (
+            {/* ✅ ICI: si aucune consultation => message seulement */}
+            {consultations.length === 0 ? (
+              <div style={cardStyle}>
+                <div style={{ fontWeight: 1000, fontSize: 16, marginBottom: 6 }}>Aucune consultation</div>
                 <div style={{ color: "#6b7280", fontWeight: 700 }}>
-                  Sélectionnez une consultation.
+                  Ce patient n’a pas encore effectué de consultation.
                 </div>
-              )}
-            </div>
-
-            {/* Antécédents */}
-            <div style={{ ...cardStyle, marginTop: 14 }}>
-              <div style={{ fontWeight: 1000, fontSize: 16 }}>Antécédents</div>
-
-              {antecedents.length === 0 ? (
-                <div
-                  style={{ marginTop: 10, color: "#6b7280", fontWeight: 700 }}
-                >
-                  Aucun antécédent enregistré.
-                </div>
-              ) : (
-                <div style={{ overflowX: "auto", marginTop: 10 }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ background: "#f7fbff" }}>
-                        <th style={tableTh}>Type</th>
-                        <th style={tableTh}>Description</th>
-                        <th style={tableTh}>Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {antecedents.map((a, idx) => (
-                        <tr key={a?.id ?? idx}>
-                          <td style={tableTd}>
-                            {a?.type ||
-                              a?.categorie ||
-                              a?.category ||
-                              a?.libelle ||
-                              "—"}
-                          </td>
-                          <td style={tableTd}>
-                            {a?.description || a?.details || a?.label || "—"}
-                          </td>
-                          <td style={tableTd}>
-                            {formatDate(
-                              a?.date || a?.created_at || a?.updated_at || null,
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            {/* Examens */}
-            <div style={{ ...cardStyle, marginTop: 14 }}>
-              <div style={{ fontWeight: 1000, fontSize: 16 }}>Examens</div>
-
-              {consultationExamens.length === 0 ? (
-                <div
-                  style={{ marginTop: 10, color: "#6b7280", fontWeight: 700 }}
-                >
-                  Aucun examen pour cette consultation.
-                </div>
-              ) : (
-                <div style={{ overflowX: "auto", marginTop: 10 }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ background: "#f7fbff" }}>
-                        <th style={tableTh}>Type</th>
-                        <th style={tableTh}>Date</th>
-                        <th style={tableTh}>État</th>
-                        <th style={{ ...tableTh, textAlign: "right" }}>
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {consultationExamens.map((e) => {
-                        const etat = e?.etat || "en_attente";
-                        const type = e?.type?.code
-                          ? `${e.type.code} — ${e.type.libelle}`
-                          : e?.type?.libelle || e?.type_examen?.libelle || "—";
-                        const d =
-                          e?.date_examen ||
-                          e?.date ||
-                          e?.created_at ||
-                          e?.updated_at ||
-                          null;
-                        const pdfUrl = e?.result_file_path
-                          ? fileUrlFromPath(e.result_file_path)
-                          : null;
-
-                        return (
-                          <tr key={e.id}>
-                            <td style={tableTd}>{type}</td>
-                            <td style={tableTd}>{formatDateTime(d)}</td>
-                            <td style={tableTd}>{etat}</td>
-                            <td style={{ ...tableTd, textAlign: "right" }}>
-                              {etat === "en_attente" ? (
-                                actionsBtn(
-                                  "Enregistrer résultat",
-                                  () => openEditResultModal("examen", e),
-                                  busy,
-                                )
-                              ) : (
-                                <div style={{ display: "inline-flex", gap: 8 }}>
-                                  {/* ✅ edit doit ouvrir en mode EDIT */}
-                                  {iconBtn(
-                                    "Modifier résultat",
-                                    () => openEditResultModal("examen", e),
-                                    false,
-                                    iconEdit,
-                                  )}
-                                  {iconBtn(
-                                    pdfUrl ? "Voir document" : "Aucun document",
-                                    () => {
-                                      if (pdfUrl)
-                                        window.open(
-                                          pdfUrl,
-                                          "_blank",
-                                          "noreferrer",
-                                        );
-                                    },
-                                    !pdfUrl,
-                                    iconFile,
-                                  )}
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            {/* Analyses */}
-            <div style={{ ...cardStyle, marginTop: 14 }}>
-              <div style={{ fontWeight: 1000, fontSize: 16 }}>Analyses</div>
-
-              {consultationAnalyses.length === 0 ? (
-                <div
-                  style={{ marginTop: 10, color: "#6b7280", fontWeight: 700 }}
-                >
-                  Aucune analyse pour cette consultation.
-                </div>
-              ) : (
-                <div style={{ overflowX: "auto", marginTop: 10 }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ background: "#f7fbff" }}>
-                        <th style={tableTh}>Type</th>
-                        <th style={tableTh}>Date</th>
-                        <th style={tableTh}>État</th>
-                        <th style={{ ...tableTh, textAlign: "right" }}>
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {consultationAnalyses.map((a) => {
-                        const etat = a?.etat || "en_attente";
-                        const type =
-                          a?.type_analyse?.libelle ||
-                          a?.typeAnalyse?.libelle ||
-                          a?.type?.libelle ||
-                          "—";
-                        const d =
-                          a?.date_analyse ||
-                          a?.date ||
-                          a?.created_at ||
-                          a?.updated_at ||
-                          null;
-                        const pdfUrl = a?.result_file_path
-                          ? fileUrlFromPath(a.result_file_path)
-                          : null;
-
-                        return (
-                          <tr key={a.id}>
-                            <td style={tableTd}>{type}</td>
-                            <td style={tableTd}>{formatDateTime(d)}</td>
-                            <td style={tableTd}>{etat}</td>
-                            <td style={{ ...tableTd, textAlign: "right" }}>
-                              {etat === "en_attente" ? (
-                                actionsBtn(
-                                  "Enregistrer résultat",
-                                  () => openEditResultModal("analyse", a),
-                                  busy,
-                                )
-                              ) : (
-                                <div style={{ display: "inline-flex", gap: 8 }}>
-                                  {/* ✅ edit doit ouvrir en mode EDIT */}
-                                  {iconBtn(
-                                    "Modifier résultat",
-                                    () => openEditResultModal("analyse", a),
-                                    false,
-                                    iconEdit,
-                                  )}
-                                  {iconBtn(
-                                    pdfUrl ? "Voir document" : "Aucun document",
-                                    () => {
-                                      if (pdfUrl)
-                                        window.open(
-                                          pdfUrl,
-                                          "_blank",
-                                          "noreferrer",
-                                        );
-                                    },
-                                    !pdfUrl,
-                                    iconFile,
-                                  )}
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            {/* Ordonnance + impression */}
-            <div style={{ ...cardStyle, marginTop: 14 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
-                <div style={{ fontWeight: 1000, fontSize: 16 }}>Ordonnance</div>
-                <button
-                  type="button"
-                  onClick={printOrdonnance}
-                  disabled={!ordonnanceItems.length}
-                  title={
-                    ordonnanceItems.length
-                      ? "Imprimer l’ordonnance"
-                      : "Aucune ordonnance"
-                  }
-                  style={{
-                    background: ordonnanceItems.length ? "#f3f4f6" : "#f3f4f6",
-                    color: ordonnanceItems.length ? "#9ca3af" : "#9ca3af",
-                    border: "none",
-                    borderRadius: 10,
-                    padding: "8px 10px",
-                    cursor: ordonnanceItems.length ? "pointer" : "not-allowed",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                    fontWeight: 900,
-                    fontSize: 12,
-                  }}
-                >
-                  {iconPrint}
-                </button>
               </div>
+            ) : (
+              <>
+                <div style={cardStyle}>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontWeight: 1000, fontSize: 18, marginBottom: 20 }}>Dossier médical</div>
+                  </div>
 
-              {ordonnanceItems.length === 0 ? (
-                <div
-                  style={{ marginTop: 10, color: "#6b7280", fontWeight: 700 }}
-                >
-                  Aucune ordonnance pour cette consultation.
+                  {selectedConsultation ? (
+                    <>
+                      {sectionTitle("Motif / Diagnostic")}
+                      {fieldRow("Motif", selectedConsultation?.motif || "—")}
+                      {fieldRow("Diagnostic", selectedConsultation?.diagnostic || "—")}
+
+                      {sectionTitle("Signes vitaux")}
+                      {fieldRow("Poids", selectedConsultation?.poids ?? "—")}
+                      {fieldRow("Taille", selectedConsultation?.taille ?? "—")}
+                      {fieldRow("IMC", calcImc(selectedConsultation?.poids, selectedConsultation?.taille) ?? "—")}
+                      {fieldRow("Température", selectedConsultation?.temperature ?? "—")}
+                      {fieldRow("Fréquence", selectedConsultation?.frequence_cardiaque ?? "—")}
+                      {fieldRow("Pression artérielle", selectedConsultation?.pression_arterielle ?? "—")}
+
+                      {sectionTitle("Observation")}
+                      <div style={{ color: "#111827", fontWeight: 700, whiteSpace: "pre-wrap" }}>
+                        {selectedConsultation?.observation || selectedConsultation?.observations || "—"}
+                      </div>
+
+                      {sectionTitle("Traitement")}
+                      <div style={{ color: "#111827", fontWeight: 700, whiteSpace: "pre-wrap" }}>
+                        {selectedConsultation?.traitement || "—"}
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ color: "#6b7280", fontWeight: 700 }}>Sélectionnez une consultation.</div>
+                  )}
                 </div>
-              ) : (
-                <div style={{ overflowX: "auto", marginTop: 10 }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ background: "#f7fbff" }}>
-                        <th style={tableTh}>Médicament</th>
-                        <th style={tableTh}>Posologie</th>
-                        <th style={tableTh}>Durée</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ordonnanceItems.map((it, idx) => {
-                        const nom =
-                          it?.medicament?.nom ||
-                          it?.medicament?.libelle ||
-                          it?.medicament?.name ||
-                          it?.medicament ||
-                          it?.nom ||
-                          it?.libelle ||
-                          it?.name ||
-                          it?.produit ||
-                          it?.medicament_nom ||
-                          "";
 
-                        const dosage = it?.dosage || it?.dose || it?.posologie || "";
-                        const freq = it?.frequence || it?.frequency || "";
-                        const pos = [dosage, freq].filter(Boolean).join(" • ") || "";
-                        const duree = it?.duree || it?.duration || "";
-                        const note =
-                          it?.instructions ||
-                          it?.instruction ||
-                          it?.note ||
-                          it?.commentaire ||
-                          "";
+                {/* Antécédents */}
+                <div style={{ ...cardStyle, marginTop: 14 }}>
+                  <div style={{ fontWeight: 1000, fontSize: 16 }}>Antécédents</div>
 
-                        return (
-                          <tr key={it?.id ?? idx}>
-                            <td style={tableTd}>{nom}</td>
-                            <td style={tableTd}>{pos}</td>
-                            <td style={tableTd}>{duree}</td>
+                  {antecedents.length === 0 ? (
+                    <div style={{ marginTop: 10, color: "#6b7280", fontWeight: 700 }}>
+                      Aucun antécédent enregistré.
+                    </div>
+                  ) : (
+                    <div style={{ overflowX: "auto", marginTop: 10 }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr style={{ background: "#f7fbff" }}>
+                            <th style={tableTh}>Type</th>
+                            <th style={tableTh}>Description</th>
+                            <th style={tableTh}>Date</th>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                        </thead>
+                        <tbody>
+                          {antecedents.map((a, idx) => (
+                            <tr key={a?.id ?? idx}>
+                              <td style={tableTd}>{a?.type || a?.categorie || a?.category || a?.libelle || "—"}</td>
+                              <td style={tableTd}>{a?.description || a?.details || a?.label || "—"}</td>
+                              <td style={tableTd}>{formatDate(a?.date || a?.created_at || a?.updated_at || null)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+
+                {/* Examens */}
+                <div style={{ ...cardStyle, marginTop: 14 }}>
+                  <div style={{ fontWeight: 1000, fontSize: 16 }}>Examens</div>
+
+                  {consultationExamens.length === 0 ? (
+                    <div style={{ marginTop: 10, color: "#6b7280", fontWeight: 700 }}>
+                      Aucun examen pour cette consultation.
+                    </div>
+                  ) : (
+                    <div style={{ overflowX: "auto", marginTop: 10 }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr style={{ background: "#f7fbff" }}>
+                            <th style={tableTh}>Type</th>
+                            <th style={tableTh}>Date</th>
+                            <th style={tableTh}>État</th>
+                            <th style={{ ...tableTh, textAlign: "right" }}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {consultationExamens.map((e) => {
+                            const etat = e?.etat || "en_attente";
+                            const type = e?.type?.code
+                              ? `${e.type.code} — ${e.type.libelle}`
+                              : e?.type?.libelle || e?.type_examen?.libelle || "—";
+                            const d = e?.date_examen || e?.date || e?.created_at || e?.updated_at || null;
+                            const pdfUrl = e?.result_file_path ? fileUrlFromPath(e.result_file_path) : null;
+
+                            return (
+                              <tr key={e.id}>
+                                <td style={tableTd}>{type}</td>
+                                <td style={tableTd}>{formatDateTime(d)}</td>
+                                <td style={tableTd}>{etat}</td>
+                                <td style={{ ...tableTd, textAlign: "right" }}>
+                                  {etat === "en_attente" ? (
+                                    actionsBtn("Enregistrer résultat", () => openEditResultModal("examen", e), busy)
+                                  ) : (
+                                    <div style={{ display: "inline-flex", gap: 8 }}>
+                                      {iconBtn("Modifier résultat", () => openEditResultModal("examen", e), false, iconEdit)}
+                                      {iconBtn(
+                                        pdfUrl ? "Voir document" : "Aucun document",
+                                        () => {
+                                          if (pdfUrl) window.open(pdfUrl, "_blank", "noreferrer");
+                                        },
+                                        !pdfUrl,
+                                        iconFile
+                                      )}
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Analyses */}
+                <div style={{ ...cardStyle, marginTop: 14 }}>
+                  <div style={{ fontWeight: 1000, fontSize: 16 }}>Analyses</div>
+
+                  {consultationAnalyses.length === 0 ? (
+                    <div style={{ marginTop: 10, color: "#6b7280", fontWeight: 700 }}>
+                      Aucune analyse pour cette consultation.
+                    </div>
+                  ) : (
+                    <div style={{ overflowX: "auto", marginTop: 10 }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr style={{ background: "#f7fbff" }}>
+                            <th style={tableTh}>Type</th>
+                            <th style={tableTh}>Date</th>
+                            <th style={tableTh}>État</th>
+                            <th style={{ ...tableTh, textAlign: "right" }}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {consultationAnalyses.map((a) => {
+                            const etat = a?.etat || "en_attente";
+                            const type =
+                              a?.type_analyse?.libelle || a?.typeAnalyse?.libelle || a?.type?.libelle || "—";
+                            const d = a?.date_analyse || a?.date || a?.created_at || a?.updated_at || null;
+                            const pdfUrl = a?.result_file_path ? fileUrlFromPath(a.result_file_path) : null;
+
+                            return (
+                              <tr key={a.id}>
+                                <td style={tableTd}>{type}</td>
+                                <td style={tableTd}>{formatDateTime(d)}</td>
+                                <td style={tableTd}>{etat}</td>
+                                <td style={{ ...tableTd, textAlign: "right" }}>
+                                  {etat === "en_attente" ? (
+                                    actionsBtn("Enregistrer résultat", () => openEditResultModal("analyse", a), busy)
+                                  ) : (
+                                    <div style={{ display: "inline-flex", gap: 8 }}>
+                                      {iconBtn("Modifier résultat", () => openEditResultModal("analyse", a), false, iconEdit)}
+                                      {iconBtn(
+                                        pdfUrl ? "Voir document" : "Aucun document",
+                                        () => {
+                                          if (pdfUrl) window.open(pdfUrl, "_blank", "noreferrer");
+                                        },
+                                        !pdfUrl,
+                                        iconFile
+                                      )}
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Ordonnance + impression */}
+                <div style={{ ...cardStyle, marginTop: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                    <div style={{ fontWeight: 1000, fontSize: 16 }}>Ordonnance</div>
+                    <button
+                      type="button"
+                      onClick={printOrdonnance}
+                      disabled={!ordonnanceItems.length}
+                      title={ordonnanceItems.length ? "Imprimer l’ordonnance" : "Aucune ordonnance"}
+                      style={{
+                        background: "#f3f4f6",
+                        color: "#9ca3af",
+                        border: "none",
+                        borderRadius: 10,
+                        padding: "8px 10px",
+                        cursor: ordonnanceItems.length ? "pointer" : "not-allowed",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontWeight: 900,
+                        fontSize: 12,
+                      }}
+                    >
+                      {iconPrint}
+                    </button>
+                  </div>
+
+                  {ordonnanceItems.length === 0 ? (
+                    <div style={{ marginTop: 10, color: "#6b7280", fontWeight: 700 }}>
+                      Aucune ordonnance pour cette consultation.
+                    </div>
+                  ) : (
+                    <div style={{ overflowX: "auto", marginTop: 10 }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr style={{ background: "#f7fbff" }}>
+                            <th style={tableTh}>Médicament</th>
+                            <th style={tableTh}>Posologie</th>
+                            <th style={tableTh}>Durée</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ordonnanceItems.map((it, idx) => {
+                            const nom =
+                              it?.medicament?.nom ||
+                              it?.medicament?.libelle ||
+                              it?.medicament?.name ||
+                              it?.medicament ||
+                              it?.nom ||
+                              it?.libelle ||
+                              it?.name ||
+                              it?.produit ||
+                              it?.medicament_nom ||
+                              "";
+
+                            const dosage = it?.dosage || it?.dose || it?.posologie || "";
+                            const freq = it?.frequence || it?.frequency || "";
+                            const pos = [dosage, freq].filter(Boolean).join(" • ") || "";
+                            const duree = it?.duree || it?.duration || "";
+
+                            return (
+                              <tr key={it?.id ?? idx}>
+                                <td style={tableTd}>{nom}</td>
+                                <td style={tableTd}>{pos}</td>
+                                <td style={tableTd}>{duree}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
 
-      {/* Modal résultat (edit/view) */}
+      {/* Modal résultat */}
       {resultModal.open ? (
         <div
           role="dialog"
@@ -1611,80 +1235,37 @@ const ordonnanceItems = useMemo(() => {
               padding: 14,
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                gap: 10,
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
               <div>
-                <div
-                  style={{
-                    color: "#6b7280",
-                    fontWeight: 700,
-                    fontSize: 13,
-                    marginTop: 2,
-                  }}
-                >
+                <div style={{ color: "#6b7280", fontWeight: 700, fontSize: 13, marginTop: 2 }}>
                   {resultModal.kind === "analyse"
-                    ? resultModal.item?.type_analyse?.libelle ||
-                      resultModal.item?.typeAnalyse?.libelle ||
-                      "—"
+                    ? resultModal.item?.type_analyse?.libelle || resultModal.item?.typeAnalyse?.libelle || "—"
                     : resultModal.item?.type?.code
                       ? `${resultModal.item.type.code} — ${resultModal.item.type.libelle}`
                       : resultModal.item?.type?.libelle || "—"}
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={closeResultModal}
-                aria-label="Fermer"
-                title="Fermer"
-              >
+              <button type="button" onClick={closeResultModal} aria-label="Fermer" title="Fermer">
                 ✕
               </button>
             </div>
 
             <div style={{ marginTop: 12 }}>
-              {/* ✅ Nouveau layout demandé: Résultat à gauche (vertical), Remarques + Document à droite */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 24,
-                  alignItems: "start",
-                }}
-              >
-                {/* Colonne gauche : Résultat */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
                 <div className="form-group">
                   <label className="form-label">Résultat </label>
                   <textarea
                     className="custom-input"
-                    style={{
-                      minHeight: 220,
-                      padding: 10,
-                      width: "97%",
-                      resize: "vertical",
-                    }}
+                    style={{ minHeight: 220, padding: 10, width: "97%", resize: "vertical" }}
                     value={resultModal.resultat}
                     disabled={resultModal.mode === "view"}
-                    onChange={(e) =>
-                      setResultModal((m) => ({
-                        ...m,
-                        resultat: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => setResultModal((m) => ({ ...m, resultat: e.target.value }))}
                     placeholder="ex: Hb = 12.3 g/dL ..."
                   />
                 </div>
 
-                {/* Colonne droite : Remarques au-dessus + Document dessous */}
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 12 }}
-                >
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <div className="form-group">
                     <label className="form-label">Remarques</label>
                     <input
@@ -1692,12 +1273,7 @@ const ordonnanceItems = useMemo(() => {
                       style={{ padding: 10, width: "94%" }}
                       value={resultModal.remarques}
                       disabled={resultModal.mode === "view"}
-                      onChange={(e) =>
-                        setResultModal((m) => ({
-                          ...m,
-                          remarques: e.target.value,
-                        }))
-                      }
+                      onChange={(e) => setResultModal((m) => ({ ...m, remarques: e.target.value }))}
                       placeholder="ex: contrôle dans 2 semaines ..."
                     />
                   </div>
@@ -1712,47 +1288,21 @@ const ordonnanceItems = useMemo(() => {
                           setResultModal((m) => ({
                             ...m,
                             file: e.target.files?.[0] || null,
-                            // si un nouveau fichier est choisi, on annule la demande de suppression
-                            removeExistingFile: e.target.files?.[0]
-                              ? false
-                              : m.removeExistingFile,
+                            removeExistingFile: e.target.files?.[0] ? false : m.removeExistingFile,
                           }))
                         }
-                        style={{
-                          width: "94%",
-                          padding: 10,
-                          border: "1px solid #eef2f7",
-                          borderRadius: 10,
-                        }}
+                        style={{ width: "94%", padding: 10, border: "1px solid #eef2f7", borderRadius: 10 }}
                       />
 
                       {resultModal.file ? (
-                        <div
-                          style={{
-                            marginTop: 8,
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                          }}
-                        >
-                          <div
-                            style={{
-                              color: "#6b7280",
-                              fontWeight: 700,
-                              fontSize: 12,
-                            }}
-                          >
-                            Fichier sélectionné :{" "}
-                            <span style={{ color: "#111827" }}>
-                              {resultModal.file.name}
-                            </span>
+                        <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ color: "#6b7280", fontWeight: 700, fontSize: 12 }}>
+                            Fichier sélectionné : <span style={{ color: "#111827" }}>{resultModal.file.name}</span>
                           </div>
 
                           <button
                             type="button"
-                            onClick={() =>
-                              setResultModal((m) => ({ ...m, file: null }))
-                            }
+                            onClick={() => setResultModal((m) => ({ ...m, file: null }))}
                             title="Retirer le fichier sélectionné"
                             aria-label="Retirer le fichier sélectionné"
                             style={{
@@ -1770,34 +1320,19 @@ const ordonnanceItems = useMemo(() => {
                           </button>
                         </div>
                       ) : null}
+
                       {resultModal.item?.result_file_path ? (
                         <div style={{ marginTop: 10 }}>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              gap: 10,
-                            }}
-                          >
-                            <div
-                              style={{
-                                color: "#6b7280",
-                                fontWeight: 700,
-                                fontSize: 13,
-                              }}
-                            >
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                            <div style={{ color: "#6b7280", fontWeight: 700, fontSize: 13 }}>
                               PDF actuel :{" "}
                               <a
-                                href={fileUrlFromPath(
-                                  resultModal.item.result_file_path,
-                                )}
+                                href={fileUrlFromPath(resultModal.item.result_file_path)}
                                 target="_blank"
                                 rel="noreferrer"
                                 style={{ color: "#2563eb", fontWeight: 900 }}
                               >
-                                {resultModal.item.result_file_original_name ||
-                                  "Ouvrir"}
+                                {resultModal.item.result_file_original_name || "Ouvrir"}
                               </a>
                             </div>
 
@@ -1810,14 +1345,8 @@ const ordonnanceItems = useMemo(() => {
                               style={{
                                 background: "transparent",
                                 border: "none",
-                                cursor:
-                                  busy || resultModal.submitting
-                                    ? "not-allowed"
-                                    : "pointer",
-                                color:
-                                  busy || resultModal.submitting
-                                    ? "#9ca3af"
-                                    : "#ef4444",
+                                cursor: busy || resultModal.submitting ? "not-allowed" : "pointer",
+                                color: busy || resultModal.submitting ? "#9ca3af" : "#ef4444",
                                 display: "inline-flex",
                                 alignItems: "center",
                                 justifyContent: "center",
@@ -1830,46 +1359,11 @@ const ordonnanceItems = useMemo(() => {
                         </div>
                       ) : null}
                     </div>
-                  ) : (
-                    <div className="form-group">
-                      <label className="form-label">Document</label>
-                      <div
-                        style={{
-                          padding: 10,
-                          border: "1px solid #eef2f7",
-                          borderRadius: 10,
-                          fontWeight: 700,
-                        }}
-                      >
-                        {resultModal.item?.result_file_path ? (
-                          <a
-                            href={fileUrlFromPath(
-                              resultModal.item.result_file_path,
-                            )}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ color: "#2563eb", fontWeight: 900 }}
-                          >
-                            {resultModal.item?.result_file_original_name ||
-                              "Ouvrir le PDF"}
-                          </a>
-                        ) : (
-                          "—"
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 10,
-                  marginTop: 12,
-                }}
-              >
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 12 }}>
                 {resultModal.mode === "edit" ? (
                   <button
                     type="button"
@@ -1881,16 +1375,12 @@ const ordonnanceItems = useMemo(() => {
                       border: "none",
                       borderRadius: 10,
                       padding: "10px 14px",
-                      cursor: resultModal.submitting
-                        ? "not-allowed"
-                        : "pointer",
+                      cursor: resultModal.submitting ? "not-allowed" : "pointer",
                       fontWeight: 700,
                       opacity: resultModal.submitting ? 0.7 : 1,
                     }}
                   >
-                    {resultModal.submitting
-                      ? "Enregistrement..."
-                      : "Enregistrer"}
+                    {resultModal.submitting ? "Enregistrement..." : "Enregistrer"}
                   </button>
                 ) : null}
               </div>

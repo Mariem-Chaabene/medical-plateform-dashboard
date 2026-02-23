@@ -1231,22 +1231,6 @@ export default function PatientDossier() {
                         >
                           {formatDate(d)}
                         </div>
-
-                        <div
-                          style={{
-                            fontWeight: 700,
-                            fontSize: 12,
-                            color: selected
-                              ? "#48c6ef"
-                              : "#6b7280",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                          title={motif}
-                        >
-                          {motif}
-                        </div>
                       </button>
                     );
                   })}

@@ -118,8 +118,7 @@ export default function ConsultationForm() {
     const requiredNumber = [
       "poids",
       "taille",
-      "temperature",
-      "frequence_cardiaque",
+      "temperature"
     ];
    
     for (const k of requiredText) {
@@ -361,7 +360,7 @@ export default function ConsultationForm() {
         taille: toNumberOrNull(form.taille),
         temperature: toNumberOrNull(form.temperature),
         frequence_cardiaque: toNumberOrNull(form.frequence_cardiaque),
-        pression_arterielle: form.pression_arterielle.trim(),
+        pression_arterielle: String(form.pression_arterielle || "").trim() || null,
         groupe_sanguin: form.groupe_sanguin || null, // ✅
         finish,
       };

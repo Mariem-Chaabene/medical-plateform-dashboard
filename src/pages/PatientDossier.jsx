@@ -247,6 +247,9 @@ export default function PatientDossier() {
   });
 
   const [printingOrdonnance, setPrintingOrdonnance] = useState(false);
+  // ✅ IA snapshots (historique) pour la consultation sélectionnée
+  const [aiHistory, setAiHistory] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const authHeaders = useMemo(() => {
     return {
@@ -338,6 +341,32 @@ export default function PatientDossier() {
       : [];
     return byEndpoint.length ? byEndpoint : byEmbedded;
   }, [analyses, selectedConsultation]);
+
+  useEffect(() => {
+    const cid = selectedConsultation?.id;
+    if (!token || !cid) {
+      setAiHistory([]);
+      return;
+    }
+
+    (async () => {
+      try {
+        setAiLoading(true);
+        const res = await fetch(`${API}/ai/history/consultation/${cid}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        });
+        const txt = await res.text();
+        setAiHistory(res.ok ? safeJsonParse(txt) || [] : []);
+      } catch {
+        setAiHistory([]);
+      } finally {
+        setAiLoading(false);
+      }
+    })();
+  }, [token, selectedConsultation?.id]);
 
   const ordonnanceItems = useMemo(() => {
     const cid = selectedConsultation?.id;
@@ -1270,7 +1299,6 @@ export default function PatientDossier() {
                     <div style={{ fontWeight: 1000, fontSize: 18 }}>
                       Dossier médical
                     </div>
-
                   </div>
 
                   {selectedConsultation ? (
@@ -1587,7 +1615,172 @@ export default function PatientDossier() {
                     </div>
                   )}
                 </div>
+                <div style={{ ...cardStyle, marginTop: 14 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div style={{ fontWeight: 1000, fontSize: 16 }}>
+                      IA
+                    </div>
+                    {aiLoading
+                      ? pill("Chargement…", "#6b7280", "#f3f4f6")
+                      : null}
+                  </div>
 
+                  {!aiLoading && aiHistory.length === 0 ? (
+                    <div
+                      style={{
+                        marginTop: 10,
+                        color: "#6b7280",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Aucun snapshot IA pour cette consultation.
+                      <div style={{ fontSize: 12, marginTop: 6 }}>
+                        Astuce : un snapshot se crée après “Enregistrer” ou
+                        “Enregistrer et terminer”.
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {!aiLoading && aiHistory.length > 0
+                    ? (() => {
+                        const last = aiHistory[0]; // tri desc dans ton controller
+                        const payload = last?.payload || {};
+                        const risk =
+                          last?.risk_level || payload?.risk_level || "stable";
+                        const score =
+                          last?.risk_score ?? payload?.risk_score ?? 0;
+                        const alerts = payload?.alerts || [];
+
+                        return (
+                          <div style={{ marginTop: 10 }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: 10,
+                                flexWrap: "wrap",
+                                alignItems: "center",
+                              }}
+                            >
+                              {pill(
+                                `Risque: ${risk}`,
+                                risk === "high"
+                                  ? "#b91c1c"
+                                  : risk === "medium"
+                                    ? "#92400e"
+                                    : "#065f46",
+                                risk === "high"
+                                  ? "#fee2e2"
+                                  : risk === "medium"
+                                    ? "#ffedd5"
+                                    : "#d1fae5",
+                              )}
+                              {pill(`Score: ${score}`, "#1f2937", "#f3f4f6")}
+                              {pill(
+                                `Source: ${last?.source || "—"}`,
+                                "#6b7280",
+                                "#f3f4f6",
+                              )}
+                            </div>
+
+                            <div
+                              style={{
+                                marginTop: 10,
+                                fontWeight: 900,
+                                color: "#111827",
+                              }}
+                            >
+                              Alertes
+                            </div>
+                            {alerts.length === 0 ? (
+                              <div
+                                style={{
+                                  color: "#6b7280",
+                                  fontWeight: 700,
+                                  marginTop: 6,
+                                }}
+                              >
+                                Aucune alerte.
+                              </div>
+                            ) : (
+                              <ul
+                                style={{
+                                  marginTop: 6,
+                                  paddingLeft: 18,
+                                  color: "#111827",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {alerts.map((a, idx) => {
+                                  // a peut être: objet, string JSON, ou string simple
+                                  let obj = a;
+
+                                  if (typeof a === "string") {
+                                    const parsed = safeJsonParse(a); // tu as déjà safeJsonParse dans le fichier
+                                    obj = parsed ?? { title: a };
+                                  }
+
+                                  const title =
+                                    obj?.title ||
+                                    obj?.message ||
+                                    obj?.code ||
+                                    "Alerte";
+                                  const explanation =
+                                    obj?.explanation ||
+                                    obj?.detail ||
+                                    obj?.description ||
+                                    "";
+                                  const severity = obj?.severity;
+
+                                  return (
+                                    <li key={idx} style={{ marginBottom: 8 }}>
+                                      <div
+                                        style={{
+                                          fontWeight: 900,
+                                          color: "#111827",
+                                        }}
+                                      >
+                                        {title}
+                                        {severity != null ? (
+                                          <span
+                                            style={{
+                                              marginLeft: 8,
+                                              fontWeight: 900,
+                                              fontSize: 12,
+                                              color: "#6b7280",
+                                            }}
+                                          >
+                                            (sev: {severity})
+                                          </span>
+                                        ) : null}
+                                      </div>
+
+                                      {explanation ? (
+                                        <div
+                                          style={{
+                                            marginTop: 2,
+                                            color: "#374151",
+                                            fontWeight: 700,
+                                          }}
+                                        >
+                                          {explanation}
+                                        </div>
+                                      ) : null}
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            )}
+                          </div>
+                        );
+                      })()
+                    : null}
+                </div>
                 {/* Ordonnance + impression */}
                 <div style={{ ...cardStyle, marginTop: 14 }}>
                   <div

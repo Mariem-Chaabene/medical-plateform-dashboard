@@ -5,6 +5,7 @@ import Input from "../components/ui/Input/Input";
 import { useAuth } from "../context/AuthContext";
 import OrdonnanceDocument from "../components/ordonnance/OrdonnanceDocument";
 import "../components/ordonnance/OrdonnanceDocument.css";
+import DmeChat from "../components/Messages/DmeChat";
 
 const BASE = "http://127.0.0.1:8000";
 const API = `${BASE}/api`;
@@ -1267,7 +1268,6 @@ export default function PatientDossier() {
               </>
             )}
           </div>
-
           {/* Colonne droite */}
           <div>
             {/* ✅ ICI: si aucune consultation => message seulement */}
@@ -1623,9 +1623,7 @@ export default function PatientDossier() {
                       alignItems: "center",
                     }}
                   >
-                    <div style={{ fontWeight: 1000, fontSize: 16 }}>
-                      IA
-                    </div>
+                    <div style={{ fontWeight: 1000, fontSize: 16 }}>IA</div>
                     {aiLoading
                       ? pill("Chargement…", "#6b7280", "#f3f4f6")
                       : null}
@@ -1882,6 +1880,9 @@ export default function PatientDossier() {
               </>
             )}
           </div>
+          <div style={{ ...cardStyle, marginTop: 14, padding: 0 }}>
+            <DmeChat apiBase={API} token={token} dmeId={dmeId} />
+          </div>{" "}
         </div>
       )}
 

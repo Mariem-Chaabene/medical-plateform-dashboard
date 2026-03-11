@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import Layout from "../components/Layout";
 import Input from "../components/ui/Input/Input";
 import { useAuth } from "../context/AuthContext";
@@ -1880,9 +1880,37 @@ export default function PatientDossier() {
               </>
             )}
           </div>
-          <div style={{ ...cardStyle, marginTop: 14, padding: 0 }}>
+          <div style={{ ...cardStyle, marginTop: 14, padding: 14 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ fontWeight: 1000, fontSize: 16 }}>Messagerie</div>
+
+              <Link
+                to={`/messagerie?dme=${dmeId}`}
+                style={{
+                  background: "#2563eb",
+                  color: "#fff",
+                  textDecoration: "none",
+                  borderRadius: 10,
+                  padding: "8px 12px",
+                  fontWeight: 900,
+                  fontSize: 12,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Ouvrir dans la messagerie
+              </Link>
+            </div>
+
             <DmeChat apiBase={API} token={token} dmeId={dmeId} />
-          </div>{" "}
+          </div>
         </div>
       )}
 

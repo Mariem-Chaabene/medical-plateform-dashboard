@@ -35,6 +35,7 @@ import TypeAntecedantCreate from "./pages/TypeAntecedantCreate";
 import TypeAntecedantShow from "./pages/TypeAntecedantShow";
 import TypeAntecedantEdit from "./pages/TypeAntecedantEdit";
 import PatientDossier from "./pages/PatientDossier";
+import MessageriePage from "./components/Messagerie/MessageriePage";
 
 function App() {
   return (
@@ -271,8 +272,7 @@ function App() {
           }
         />
 
-        
-         <Route
+        <Route
           path="/type_antecedants"
           element={
             <ProtectedRoute>
@@ -305,7 +305,14 @@ function App() {
           }
         />
         <Route path="/patients/:id/dossier" element={<PatientDossier />} />
-
+        <Route
+          path="/messagerie"
+          element={
+            <ProtectedRoute>
+              <MessageriePage />
+            </ProtectedRoute>
+          }
+        />
 
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>

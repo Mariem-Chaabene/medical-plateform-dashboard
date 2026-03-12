@@ -105,6 +105,25 @@ export default function MessageriePage() {
     }
   }, [token, headers, searchParams]);
 
+  const markConversationRead = useCallback(
+    async (conversationId) => {
+      if (!token || !conversationId || !navigator.onLine) return;
+
+      try {
+        await fetch(
+          `${API}/messagerie/conversations/${conversationId}/mark-read`,
+          {
+            method: "POST",
+            headers,
+          },
+        );
+      } catch {
+        // ignore
+      }
+    },
+    [token, headers],
+  );
+
   useEffect(() => {
     if (!token) return;
     loadConversations();
@@ -131,6 +150,17 @@ export default function MessageriePage() {
       window.removeEventListener("offline", handleOffline);
     };
   }, [loadConversations]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+
+    const run = async () => {
+      await markConversationRead(selectedId);
+      await loadConversations();
+    };
+
+    run();
+  }, [selectedId, markConversationRead, loadConversations]);
 
   const selectedConversation = conversations.find(
     (c) => String(c.id) === String(selectedId),

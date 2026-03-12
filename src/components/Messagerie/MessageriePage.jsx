@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import Layout from "../../components/Layout";
 import { useAuth } from "../../context/AuthContext";
 import DmeChat from "../../components/Messages/DmeChat";
+import Layout from "../Layout";
 import "./MessageriePage.css";
 
 const BASE = "http://127.0.0.1:8000";
@@ -25,10 +25,14 @@ function formatDateTime(d) {
 export default function MessageriePage() {
   const { token } = useAuth();
   const [searchParams] = useSearchParams();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [conversations, setConversations] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== "undefined" ? navigator.onLine : true,
+  );
 
   const headers = useMemo(() => {
     return {
@@ -38,10 +42,18 @@ export default function MessageriePage() {
     };
   }, [token]);
 
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     if (!token) return;
 
+    if (!navigator.onLine) {
+      setIsOnline(false);
+      setLoading(false);
+      setError("");
+      return;
+    }
+
     try {
+      setIsOnline(true);
       setLoading(true);
       setError("");
 
@@ -60,6 +72,7 @@ export default function MessageriePage() {
 
       const data = safeJsonParse(txt) || [];
       const list = Array.isArray(data) ? data : [];
+
       setConversations(list);
 
       const dmeFromQuery = searchParams.get("dme");
@@ -74,32 +87,57 @@ export default function MessageriePage() {
         }
       }
 
-      if (list.length > 0) {
-        setSelectedId((prev) => prev ?? list[0].id);
-      } else {
-        setSelectedId(null);
-      }
+      setSelectedId((prev) => {
+        if (prev && list.some((c) => String(c.id) === String(prev))) {
+          return prev;
+        }
+        return list.length > 0 ? list[0].id : null;
+      });
     } catch (e) {
-      setError(e?.message || "Erreur réseau.");
-      setConversations([]);
-      setSelectedId(null);
+      if (!navigator.onLine) {
+        setIsOnline(false);
+        setError("");
+      } else {
+        setError(e?.message || "Erreur réseau.");
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, headers, searchParams]);
 
   useEffect(() => {
     if (!token) return;
     loadConversations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, loadConversations]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setError("");
+      loadConversations();
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setError("");
+      setLoading(false);
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [loadConversations]);
 
   const selectedConversation = conversations.find(
     (c) => String(c.id) === String(selectedId),
   );
 
   return (
-     <Layout>
+    <Layout>
       <div className="msg-page">
         <div className="msg-sidebar">
           <div className="msg-sidebar-header">
@@ -113,6 +151,12 @@ export default function MessageriePage() {
               {loading ? "..." : "↻"}
             </button>
           </div>
+
+          {!isOnline ? (
+            <div className="msg-offline-banner">
+              Mode hors ligne — affichage des conversations déjà chargées.
+            </div>
+          ) : null}
 
           {error ? <div className="msg-error">{error}</div> : null}
 
@@ -173,6 +217,7 @@ export default function MessageriePage() {
               apiBase={API}
               token={token}
               dmeId={selectedConversation.dme_id}
+              onConversationChanged={loadConversations}
             />
           )}
         </div>

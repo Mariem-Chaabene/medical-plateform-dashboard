@@ -35,12 +35,15 @@ function playBeep() {
     const ctx = new AudioCtx();
     const o = ctx.createOscillator();
     const g = ctx.createGain();
+
     o.type = "sine";
     o.frequency.value = 880;
     g.gain.value = 0.05;
+
     o.connect(g);
     g.connect(ctx.destination);
     o.start();
+
     setTimeout(() => {
       o.stop();
       ctx.close();
@@ -76,6 +79,7 @@ export default function DmeChat({
   apiBase,
   token,
   dmeId,
+  variant = "page",
   onConversationChanged,
 }) {
   const [loading, setLoading] = useState(true);
@@ -94,6 +98,7 @@ export default function DmeChat({
 
   const listRef = useRef(null);
   const syncInProgressRef = useRef(false);
+  const toastTimerRef = useRef(null);
 
   const myUserId = useMemo(() => getUserIdFromToken(token), [token]);
 
@@ -112,8 +117,17 @@ export default function DmeChat({
   };
 
   const showToast = (title, message) => {
-    setToast({ open: true, title, message });
-    setTimeout(() => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+
+    setToast({
+      open: true,
+      title,
+      message,
+    });
+
+    toastTimerRef.current = setTimeout(() => {
       setToast((t) => ({ ...t, open: false }));
     }, 2500);
   };
@@ -122,6 +136,10 @@ export default function DmeChat({
     if (typeof onConversationChanged === "function") {
       onConversationChanged();
     }
+  };
+
+  const openInbox = () => {
+    window.location.assign("/messagerie");
   };
 
   const mergeQueuedMessages = (serverMessages) => {
@@ -165,16 +183,20 @@ export default function DmeChat({
       const res = await fetch(`${apiBase}/dmes/${dmeId}/messages`, {
         headers,
       });
+
       const txt = await res.text();
 
       if (!res.ok) {
         const maybe = safeJsonParse(txt);
-        throw new Error(maybe?.message || "Impossible de charger les messages.");
+        throw new Error(
+          maybe?.message || "Impossible de charger les messages.",
+        );
       }
 
       const data = safeJsonParse(txt) || [];
       const list = Array.isArray(data) ? data : [];
       setMessages(mergeQueuedMessages(list));
+
       setTimeout(scrollToBottom, 0);
     } catch (e) {
       setError(e?.message || "Erreur réseau.");
@@ -186,11 +208,11 @@ export default function DmeChat({
 
   const updateQueuedMessageStatus = (localId, patch) => {
     const queue = loadQueue(dmeId);
+
     const next = queue.map((item) =>
-      String(item.local_id) === String(localId)
-        ? { ...item, ...patch }
-        : item,
+      String(item.local_id) === String(localId) ? { ...item, ...patch } : item,
     );
+
     saveQueue(dmeId, next);
 
     setMessages((prev) =>
@@ -211,11 +233,10 @@ export default function DmeChat({
     const queue = loadQueue(dmeId).filter(
       (item) => String(item.local_id) !== String(localId),
     );
+
     saveQueue(dmeId, queue);
 
-    setMessages((prev) =>
-      prev.filter((m) => String(m.id) !== String(localId)),
-    );
+    setMessages((prev) => prev.filter((m) => String(m.id) !== String(localId)));
   };
 
   const syncQueuedMessages = async () => {
@@ -226,6 +247,7 @@ export default function DmeChat({
     const pending = queue.filter(
       (item) => item.status === "pending" || item.status === "failed",
     );
+
     if (!pending.length) return;
 
     syncInProgressRef.current = true;
@@ -263,9 +285,8 @@ export default function DmeChat({
               const withoutLocal = prev.filter(
                 (m) => String(m.id) !== String(item.local_id),
               );
-              if (
-                withoutLocal.some((m) => String(m.id) === String(data.id))
-              ) {
+
+              if (withoutLocal.some((m) => String(m.id) === String(data.id))) {
                 return withoutLocal;
               }
 
@@ -349,6 +370,7 @@ export default function DmeChat({
     }
 
     const tempId = `tmp-${Date.now()}`;
+
     const optimistic = {
       id: tempId,
       dme_id: dmeId,
@@ -386,10 +408,16 @@ export default function DmeChat({
           const withoutTmp = prev.filter(
             (m) => String(m.id) !== String(tempId),
           );
+
           if (withoutTmp.some((m) => String(m.id) === String(data.id))) {
             return withoutTmp;
           }
-          return [...withoutTmp, data];
+
+          return [...withoutTmp, data].sort((a, b) => {
+            const da = new Date(a?.created_at || 0).getTime();
+            const db = new Date(b?.created_at || 0).getTime();
+            return da - db;
+          });
         });
 
         setError("");
@@ -409,12 +437,13 @@ export default function DmeChat({
       setMessages((prev) =>
         prev.filter((m) => String(m.id) !== String(tempId)),
       );
-
       enqueueOfflineMessage(body);
+
       showToast(
         "Message mis en attente",
         "Le message sera renvoyé automatiquement dès le retour du réseau.",
       );
+
       triggerConversationRefresh();
     } finally {
       setSending(false);
@@ -494,6 +523,7 @@ export default function DmeChat({
         triggerConversationRefresh();
 
         const senderId = payload?.sender_id ?? payload?.sender?.id ?? null;
+
         if (
           myUserId != null &&
           senderId != null &&
@@ -508,6 +538,7 @@ export default function DmeChat({
             "Nouveau message",
             `${sender}: ${String(payload?.body || "").slice(0, 60)}`,
           );
+
           playBeep();
         }
 
@@ -521,122 +552,146 @@ export default function DmeChat({
     };
   }, [token, dmeId, myUserId]);
 
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
   return (
-    <div className="dmechat-wrap">
-      {!isOnline ? (
-        <div className="dmechat-offline-banner">
-          Hors ligne — les messages seront synchronisés automatiquement.
+    <div className="dmechat-shell">
+      <section className="dmechat-card">
+        {!isOnline ? (
+          <div className="dmechat-offline-banner">
+            Hors ligne — les messages seront synchronisés automatiquement.
+          </div>
+        ) : null}
+
+        {toast.open ? (
+          <div className="dmechat-toast">
+            <div className="dmechat-toast-title">{toast.title}</div>
+            <div className="dmechat-toast-msg">{toast.message}</div>
+          </div>
+        ) : null}
+
+        <div className="dmechat-card-header">
+          <div className="dmechat-header-actions">
+            {/* <button
+              type="button"
+              className="dmechat-open-btn"
+              onClick={openInbox}
+            >
+              Ouvrir la boîte de réception
+            </button> */}
+            <span
+              className={`dmechat-presence ${isOnline ? "online" : "offline"}`}
+            >
+              {isOnline ? "En ligne" : "Hors ligne"}
+            </span>
+
+            
+          </div>
         </div>
-      ) : null}
 
-      {toast.open ? (
-        <div className="dmechat-toast" role="status" aria-live="polite">
-          <div className="dmechat-toast-title">{toast.title}</div>
-          <div className="dmechat-toast-msg">{toast.message}</div>
-        </div>
-      ) : null}
+        {error ? <div className="dmechat-error">{error}</div> : null}
 
-      <div className="dmechat-header">
-        <div className="dmechat-title">Messagerie</div>
-        <button
-          type="button"
-          onClick={loadMessages}
-          disabled={loading}
-          className="dmechat-reload"
-          title="Rafraîchir"
-        >
-          {loading ? "..." : "↻"}
-        </button>
-      </div>
+        <div className="dmechat-list" ref={listRef}>
+          {loading ? (
+            <div className="dmechat-empty">Chargement…</div>
+          ) : messages.length === 0 ? (
+            <div className="dmechat-empty">Aucun message pour ce DME.</div>
+          ) : (
+            messages.map((m) => {
+              const senderId = m?.sender_id ?? m?.sender?.id ?? null;
+              const mine =
+                myUserId != null &&
+                senderId != null &&
+                Number(senderId) === Number(myUserId);
 
-      {error ? <div className="dmechat-error">{error}</div> : null}
+              const sender =
+                m?.sender?.name || m?.sender?.surname
+                  ? `${m.sender?.name || ""} ${m.sender?.surname || ""}`.trim()
+                  : mine
+                    ? "Moi"
+                    : `User #${m?.sender_id ?? "—"}`;
 
-      <div ref={listRef} className="dmechat-list">
-        {loading ? (
-          <div className="dmechat-empty">Chargement…</div>
-        ) : messages.length === 0 ? (
-          <div className="dmechat-empty">Aucun message pour ce DME.</div>
-        ) : (
-          messages.map((m) => {
-            const senderId = m?.sender_id ?? m?.sender?.id ?? null;
-            const mine =
-              myUserId != null &&
-              senderId != null &&
-              Number(senderId) === Number(myUserId);
+              const rowClass = [
+                "dmechat-row",
+                mine ? "mine" : "theirs",
+                m._optimistic ? "optimistic" : "",
+                m._local ? "local" : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
 
-            const sender =
-              m?.sender?.name || m?.sender?.surname
-                ? `${m.sender?.name || ""} ${m.sender?.surname || ""}`.trim()
-                : mine
-                  ? "Moi"
-                  : `User #${m?.sender_id ?? "—"}`;
-
-            return (
-              <div
-                key={m.id}
-                className={`dmechat-row ${mine ? "mine" : "theirs"} ${m._optimistic ? "optimistic" : ""} ${m._local ? "local" : ""}`}
-              >
-                <div className="dmechat-bubble">
-                  <div className="dmechat-meta">
-                    <span className="dmechat-sender">{sender}</span>
-                    <span className="dmechat-time">
-                      {formatDateTime(m.created_at)}
-                    </span>
-                  </div>
-
-                  <div className="dmechat-body">{m.body}</div>
-
-                  {m._local ? (
-                    <div className="dmechat-status">
-                      {m._status === "pending" && "En attente de connexion"}
-                      {m._status === "sending" && "Synchronisation…"}
-                      {m._status === "failed" && (
-                        <>
-                          Échec d’envoi
-                          <button
-                            type="button"
-                            className="dmechat-retry"
-                            onClick={() => retryFailedMessage(m.id)}
-                          >
-                            Réessayer
-                          </button>
-                        </>
-                      )}
+              return (
+                <div key={m.id} className={rowClass}>
+                  <div className="dmechat-bubble">
+                    <div className="dmechat-meta">
+                      <span className="dmechat-sender">{sender}</span>
+                      <span className="dmechat-time">
+                        {formatDateTime(m.created_at)}
+                      </span>
                     </div>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
 
-      <div className="dmechat-inputbar">
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={
-            isOnline
-              ? "Écrire un message…"
-              : "Écrire un message (mode hors ligne)…"
-          }
-          className="dmechat-input"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              if (!sending) sendMessage();
+                    <div className="dmechat-body">{m.body}</div>
+
+                    {m._local ? (
+                      <div className="dmechat-status-line">
+                        {m._status === "pending" && "En attente de connexion"}
+                        {m._status === "sending" && "Synchronisation…"}
+                        {m._status === "failed" && (
+                          <>
+                            <span>Échec d’envoi</span>
+                            <button
+                              type="button"
+                              className="dmechat-retry"
+                              onClick={() => retryFailedMessage(m.id)}
+                            >
+                              Réessayer
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="dmechat-inputbar">
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={
+              isOnline
+                ? "Écrire un message..."
+                : "Écrire un message (mode hors ligne)..."
             }
-          }}
-        />
-        <button
-          type="button"
-          onClick={sendMessage}
-          disabled={sending || !String(text || "").trim()}
-          className="dmechat-send"
-        >
-          {sending ? "..." : isOnline ? "Envoyer" : "Enregistrer"}
-        </button>
-      </div>
+            className="dmechat-input"
+            rows={2}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (!sending) sendMessage();
+              }
+            }}
+          />
+
+          <button
+            type="button"
+            className="dmechat-send"
+            onClick={sendMessage}
+            disabled={sending || !String(text || "").trim()}
+          >
+            {sending ? "..." : isOnline ? "Envoyer" : "Enregistrer"}
+          </button>
+        </div>
+      </section>
     </div>
   );
 }

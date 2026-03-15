@@ -197,6 +197,7 @@ export default function MessageriePage() {
               <div className="msg-empty">Aucune conversation.</div>
             ) : (
               conversations.map((conv) => {
+                console.log(conv);
                 const active = String(conv.id) === String(selectedId);
 
                 return (
@@ -208,9 +209,11 @@ export default function MessageriePage() {
                   >
                     <div className="msg-item-top">
                       <div className="msg-item-title">
-                        {conv.patient_name ||
-                          conv.title ||
-                          `Conversation #${conv.id}`}
+                        {conv.patient_name
+                          ? `Discussion DME du ${conv.patient_name}`
+                          : conv.title
+                            ? conv.title
+                            : `Discussion DME #${conv.dme_id || conv.id}`}
                       </div>
                       <div className="msg-item-time">
                         {formatDateTime(
@@ -219,7 +222,7 @@ export default function MessageriePage() {
                       </div>
                     </div>
 
-                    <div className="msg-item-sub">DME #{conv.dme_id}</div>
+                    {/* <div className="msg-item-sub">DME #{conv.dme_id}</div> */}
 
                     <div className="msg-item-preview">
                       {conv?.last_message?.sender_name

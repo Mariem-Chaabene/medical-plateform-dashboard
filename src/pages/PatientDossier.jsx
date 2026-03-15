@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import Layout from "../components/Layout";
-import Input from "../components/ui/Input/Input";
 import { useAuth } from "../context/AuthContext";
 import OrdonnanceDocument from "../components/ordonnance/OrdonnanceDocument";
 import "../components/ordonnance/OrdonnanceDocument.css";
@@ -26,10 +25,10 @@ function formatDateTime(d) {
 
 function formatDate(d) {
   if (!d) return "—";
-  const s = String(d).slice(0, 10); // YYYY-MM-DD
+  const s = String(d).slice(0, 10);
   const [y, m, day] = s.split("-");
   if (!y || !m || !day) return s;
-  return `${day}/${m}/${y}`; // DD/MM/YYYY
+  return `${day}/${m}/${y}`;
 }
 
 function calcImc(poids, taille) {
@@ -161,21 +160,24 @@ const iconInfo = (
   </svg>
 );
 
-const iconUpload = (
+const iconDiscussion = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-    <path d="M12 3v10" stroke="#b2b2b2" strokeWidth="2" strokeLinecap="round" />
     <path
-      d="M8 7l4-4 4 4"
-      stroke="#b2b2b2"
+      d="M8 10h8"
+      stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
-      strokeLinejoin="round"
     />
     <path
-      d="M4 14v6h16v-6"
-      stroke="#b2b2b2"
+      d="M8 14h5"
+      stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
+    />
+    <path
+      d="M21 11.5C21 16.1944 16.9706 20 12 20C10.3183 20 8.74432 19.5644 7.40661 18.8065L3 20L4.33772 16.2609C3.49415 14.9077 3 13.2554 3 11.5C3 6.80558 7.02944 3 12 3C16.9706 3 21 6.80558 21 11.5Z"
+      stroke="currentColor"
+      strokeWidth="2"
       strokeLinejoin="round"
     />
   </svg>
@@ -232,6 +234,7 @@ export default function PatientDossier() {
   const [examens, setExamens] = useState([]);
 
   const [patientDrawerOpen, setPatientDrawerOpen] = useState(false);
+  const [isDiscussionOpen, setIsDiscussionOpen] = useState(false);
 
   const [consultationMedecin, setConsultationMedecin] = useState(null);
 
@@ -248,9 +251,26 @@ export default function PatientDossier() {
   });
 
   const [printingOrdonnance, setPrintingOrdonnance] = useState(false);
-  // ✅ IA snapshots (historique) pour la consultation sélectionnée
   const [aiHistory, setAiHistory] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
+
+  const openPatientDrawer = () => {
+    setIsDiscussionOpen(false);
+    setPatientDrawerOpen(true);
+  };
+
+  const openDiscussionDrawer = () => {
+    setPatientDrawerOpen(false);
+    setIsDiscussionOpen(true);
+  };
+
+  const closeDiscussionDrawer = () => {
+    setIsDiscussionOpen(false);
+  };
+
+  const closePatientDrawer = () => {
+    setPatientDrawerOpen(false);
+  };
 
   const authHeaders = useMemo(() => {
     return {
@@ -280,7 +300,6 @@ export default function PatientDossier() {
     );
   }, [consultations, selectedConsultationId]);
 
-  // ✅ date ordonnance (après selectedConsultation)
   const dateOrdonnanceForDoc = useMemo(() => {
     return (
       selectedConsultation?.ordonnance?.date_ordonnance ||
@@ -368,6 +387,18 @@ export default function PatientDossier() {
       }
     })();
   }, [token, selectedConsultation?.id]);
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        closeDiscussionDrawer();
+        closePatientDrawer();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const ordonnanceItems = useMemo(() => {
     const cid = selectedConsultation?.id;
@@ -504,10 +535,8 @@ export default function PatientDossier() {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, patientId]);
 
-  // ✅ load médecin depuis consultation (medecin_id)
   useEffect(() => {
     const id =
       selectedConsultation?.medecin_id ||
@@ -850,7 +879,6 @@ export default function PatientDossier() {
 
   return (
     <Layout>
-      {/* zone d'impression */}
       {printingOrdonnance ? (
         <div className="print-area">
           <OrdonnanceDocument
@@ -945,7 +973,7 @@ export default function PatientDossier() {
 
           <button
             type="button"
-            onClick={() => setPatientDrawerOpen(false)}
+            onClick={closePatientDrawer}
             aria-label="Fermer infos patient"
             title="Fermer"
             style={{
@@ -1049,7 +1077,7 @@ export default function PatientDossier() {
                       type="button"
                       onClick={() => {
                         setSelectedConsultationId(c.id);
-                        setPatientDrawerOpen(false);
+                        closePatientDrawer();
                       }}
                       style={{
                         textAlign: "left",
@@ -1083,6 +1111,127 @@ export default function PatientDossier() {
               )}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Overlay drawer discussion */}
+      {isDiscussionOpen ? (
+        <div
+          onClick={closeDiscussionDrawer}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(17,24,39,0.28)",
+            zIndex: 9997,
+          }}
+        />
+      ) : null}
+
+      {/* Drawer discussion */}
+      <div
+        aria-hidden={!isDiscussionOpen}
+        style={{
+          position: "fixed",
+          inset: "0 0 0 auto",
+          width: "min(560px, 100vw)",
+          transform: isDiscussionOpen ? "translateX(0)" : "translateX(102%)",
+          transition: "transform 220ms ease",
+          zIndex: 9998,
+          background: "#f8fafc",
+          borderLeft: "1px solid #e5e7eb",
+          boxShadow: "-8px 0 24px rgba(0,0,0,0.18)",
+          display: "flex",
+          flexDirection: "column",
+          pointerEvents: isDiscussionOpen ? "auto" : "none",
+        }}
+      >
+        <div
+          style={{
+            padding: 16,
+            borderBottom: "1px solid #e5e7eb",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            background: "#ffffff",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontWeight: 1000,
+                color: "#111827",
+                fontSize: 16,
+                lineHeight: 1.1,
+              }}
+            >
+              Discussion
+            </div>
+            <div
+              style={{
+                color: "#6b7280",
+                fontWeight: 700,
+                fontSize: 12,
+                marginTop: 4,
+              }}
+            >
+              Conversation liée au dossier médical de {patientName}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={closeDiscussionDrawer}
+            aria-label="Fermer la discussion"
+            title="Fermer"
+            style={{
+              background: "#fff",
+              border: "1px solid #e5e7eb",
+              width: 34,
+              height: 34,
+              borderRadius: 12,
+              color: "#111827",
+              cursor: "pointer",
+              fontWeight: 1000,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div
+          style={{
+            flex: 1,
+            overflow: "hidden",
+            padding: 14,
+            minHeight: 0,
+            display: "flex",
+          }}
+        >
+          {dmeId ? (
+            <DmeChat
+              apiBase={API}
+              token={token}
+              dmeId={dmeId}
+              variant="drawer"
+            />
+          ) : (
+            <div
+              style={{
+                background: "#fff",
+                border: "1px solid #eef2f7",
+                borderRadius: 14,
+                padding: 14,
+                color: "#6b7280",
+                fontWeight: 700,
+              }}
+            >
+              Aucun DME disponible pour afficher la discussion.
+            </div>
+          )}
         </div>
       </div>
 
@@ -1129,9 +1278,9 @@ export default function PatientDossier() {
         >
           <button
             type="button"
-            onClick={() => setPatientDrawerOpen(true)}
+            onClick={openPatientDrawer}
             style={{
-              background: "grey",
+              background: patientDrawerOpen ? "#4b5563" : "grey",
               color: "#fff",
               border: "none",
               borderRadius: 12,
@@ -1148,7 +1297,31 @@ export default function PatientDossier() {
             <span style={{ display: "inline-flex", color: "#fff" }}>
               {iconInfo}
             </span>
-            Infos
+            
+          </button>
+
+          <button
+            type="button"
+            onClick={openDiscussionDrawer}
+            style={{
+              background: isDiscussionOpen ? "#2563eb" : "#48c6ef",
+              color: "#fff",
+              border: "none",
+              borderRadius: 12,
+              padding: "10px 12px",
+              cursor: "pointer",
+              fontWeight: 1000,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              boxShadow: "0 8px 20px rgba(17,24,39,0.12)",
+            }}
+            title="Afficher la discussion du dossier"
+          >
+            <span style={{ display: "inline-flex", color: "#fff" }}>
+              {iconDiscussion}
+            </span>
+            
           </button>
 
           {pendingAnalyses.length + pendingExamens.length > 0
@@ -1202,75 +1375,71 @@ export default function PatientDossier() {
                 Aucune consultation.
               </div>
             ) : (
-              <>
-                <div
-                  style={{
-                    padding: 6,
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  {consultations.map((c) => {
-                    const d =
-                      c?.date_consultation ||
-                      c?.date ||
-                      c?.created_at ||
-                      c?.updated_at ||
-                      null;
-                    const selected =
-                      String(c.id) === String(selectedConsultation?.id);
-                    const motif = String(c?.motif || "").trim() ? c.motif : "—";
+              <div
+                style={{
+                  padding: 6,
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                {consultations.map((c) => {
+                  const d =
+                    c?.date_consultation ||
+                    c?.date ||
+                    c?.created_at ||
+                    c?.updated_at ||
+                    null;
+                  const selected =
+                    String(c.id) === String(selectedConsultation?.id);
 
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => setSelectedConsultationId(c.id)}
-                        aria-current={selected ? "true" : undefined}
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setSelectedConsultationId(c.id)}
+                      aria-current={selected ? "true" : undefined}
+                      style={{
+                        textAlign: "left",
+                        width: "100%",
+                        padding: "10px 12px",
+                        background: "transparent",
+                        borderRadius: "0 !important",
+                        border: "none",
+                        borderLeft: selected
+                          ? "2px solid #48c6ef"
+                          : "2px solid transparent",
+                        color: selected ? "#48c6ef" : "#6b7280",
+                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 2,
+                        transition: "background 120ms ease, color 120ms ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!selected) e.currentTarget.style.background = "#f8fafc";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                      }}
+                    >
+                      <div
                         style={{
-                          textAlign: "left",
-                          width: "100%",
-                          padding: "10px 12px",
-                          background: "transparent",
-                          borderRadius: "0 !important",
-                          border: "none",
-                          borderLeft: selected
-                            ? "2px solid #48c6ef"
-                            : "2px solid transparent", // bleu
-                          color: selected ? "#48c6ef" : "#6b7280",
-                          cursor: "pointer",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 2,
-                          transition: "background 120ms ease, color 120ms ease",
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!selected)
-                            e.currentTarget.style.background = "#f8fafc"; // hover léger
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = "transparent";
+                          fontWeight: 800,
+                          fontSize: 13,
+                          color: selected ? "#48c6ef" : "#111827",
                         }}
                       >
-                        <div
-                          style={{
-                            fontWeight: 800,
-                            fontSize: 13,
-                            color: selected ? "#48c6ef" : "#111827",
-                          }}
-                        >
-                          {formatDate(d)}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
+                        {formatDate(d)}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
+
           {/* Colonne droite */}
           <div>
-            {/* ✅ ICI: si aucune consultation => message seulement */}
             {consultations.length === 0 ? (
               <div style={cardStyle}>
                 <div
@@ -1285,7 +1454,6 @@ export default function PatientDossier() {
             ) : (
               <>
                 <div style={cardStyle}>
-                  {/* Barre "tab" pour rendre la consultation active très visible */}
                   <div
                     style={{
                       display: "flex",
@@ -1364,7 +1532,6 @@ export default function PatientDossier() {
                   )}
                 </div>
 
-                {/* Antécédents */}
                 <div style={{ ...cardStyle, marginTop: 14 }}>
                   <div style={{ fontWeight: 1000, fontSize: 16 }}>
                     Antécédents
@@ -1424,7 +1591,6 @@ export default function PatientDossier() {
                   )}
                 </div>
 
-                {/* Examens */}
                 <div style={{ ...cardStyle, marginTop: 14 }}>
                   <div style={{ fontWeight: 1000, fontSize: 16 }}>Examens</div>
 
@@ -1520,7 +1686,6 @@ export default function PatientDossier() {
                   )}
                 </div>
 
-                {/* Analyses */}
                 <div style={{ ...cardStyle, marginTop: 14 }}>
                   <div style={{ fontWeight: 1000, fontSize: 16 }}>Analyses</div>
 
@@ -1615,6 +1780,7 @@ export default function PatientDossier() {
                     </div>
                   )}
                 </div>
+
                 <div style={{ ...cardStyle, marginTop: 14 }}>
                   <div
                     style={{
@@ -1647,7 +1813,7 @@ export default function PatientDossier() {
 
                   {!aiLoading && aiHistory.length > 0
                     ? (() => {
-                        const last = aiHistory[0]; // tri desc dans ton controller
+                        const last = aiHistory[0];
                         const payload = last?.payload || {};
                         const risk =
                           last?.risk_level || payload?.risk_level || "stable";
@@ -1715,11 +1881,10 @@ export default function PatientDossier() {
                                 }}
                               >
                                 {alerts.map((a, idx) => {
-                                  // a peut être: objet, string JSON, ou string simple
                                   let obj = a;
 
                                   if (typeof a === "string") {
-                                    const parsed = safeJsonParse(a); // tu as déjà safeJsonParse dans le fichier
+                                    const parsed = safeJsonParse(a);
                                     obj = parsed ?? { title: a };
                                   }
 
@@ -1779,7 +1944,7 @@ export default function PatientDossier() {
                       })()
                     : null}
                 </div>
-                {/* Ordonnance + impression */}
+
                 <div style={{ ...cardStyle, marginTop: 14 }}>
                   <div
                     style={{
@@ -1880,41 +2045,9 @@ export default function PatientDossier() {
               </>
             )}
           </div>
-          <div style={{ ...cardStyle, marginTop: 14, padding: 14 }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 10,
-                marginBottom: 12,
-              }}
-            >
-              <div style={{ fontWeight: 1000, fontSize: 16 }}>Messagerie</div>
-
-              <Link
-                to={`/messagerie?dme=${dmeId}`}
-                style={{
-                  background: "#2563eb",
-                  color: "#fff",
-                  textDecoration: "none",
-                  borderRadius: 10,
-                  padding: "8px 12px",
-                  fontWeight: 900,
-                  fontSize: 12,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Ouvrir dans la messagerie
-              </Link>
-            </div>
-
-            <DmeChat apiBase={API} token={token} dmeId={dmeId} />
-          </div>
         </div>
       )}
 
-      {/* Modal résultat */}
       {resultModal.open ? (
         <div
           role="dialog"

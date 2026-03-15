@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import DmeChat from "../../components/Messages/DmeChat";
@@ -22,6 +22,35 @@ function formatDateTime(d) {
   return String(d).replace("T", " ").slice(0, 16);
 }
 
+function extractPatients(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.patients)) return payload.patients;
+  if (Array.isArray(payload?.data?.data)) return payload.data.data;
+  return [];
+}
+
+function getPatientFullName(patient) {
+  return (
+    patient?.user?.full_name ||
+    patient?.user?.name ||
+    patient?.fullName ||
+    `${patient?.user?.name || ""} ${patient?.user?.surname || ""}`.trim()
+  );
+}
+
+function matchesPatientName(patient, term) {
+  const firstName = String(patient?.user?.name || "").toLowerCase();
+  const lastName = String(patient?.user?.surname || "").toLowerCase();
+  const fullName = `${firstName} ${lastName}`.trim();
+
+  return (
+    firstName.includes(term) ||
+    lastName.includes(term) ||
+    fullName.includes(term)
+  );
+}
+
 export default function MessageriePage() {
   const { token } = useAuth();
   const [searchParams] = useSearchParams();
@@ -34,6 +63,14 @@ export default function MessageriePage() {
     typeof navigator !== "undefined" ? navigator.onLine : true,
   );
 
+  const [patientSearch, setPatientSearch] = useState("");
+  const [patients, setPatients] = useState([]);
+  const [patientSuggestions, setPatientSuggestions] = useState([]);
+  const [selectedPatientDme, setSelectedPatientDme] = useState(null);
+  const [selectedPatientName, setSelectedPatientName] = useState("");
+  const [loadingPatients, setLoadingPatients] = useState(false);
+  const searchRef = useRef(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const headers = useMemo(() => {
     return {
       Authorization: `Bearer ${token}`,
@@ -57,10 +94,7 @@ export default function MessageriePage() {
       setLoading(true);
       setError("");
 
-      const res = await fetch(`${API}/messagerie/conversations`, {
-        headers,
-      });
-
+      const res = await fetch(`${API}/messagerie/conversations`, { headers });
       const txt = await res.text();
 
       if (!res.ok) {
@@ -83,6 +117,8 @@ export default function MessageriePage() {
         );
         if (found) {
           setSelectedId(found.id);
+          setSelectedPatientDme(null);
+          setSelectedPatientName("");
           return;
         }
       }
@@ -104,6 +140,30 @@ export default function MessageriePage() {
       setLoading(false);
     }
   }, [token, headers, searchParams]);
+
+  const loadPatients = useCallback(async () => {
+    if (!token || !navigator.onLine) return;
+
+    try {
+      setLoadingPatients(true);
+
+      const res = await fetch(`${API}/patients`, { headers });
+      const txt = await res.text();
+      const data = safeJsonParse(txt);
+
+      if (!res.ok) {
+        throw new Error(data?.message || "Impossible de charger les patients.");
+      }
+
+      const list = extractPatients(data);
+      setPatients(list);
+    } catch (e) {
+      console.error("Erreur chargement patients:", e);
+      setPatients([]);
+    } finally {
+      setLoadingPatients(false);
+    }
+  }, [token, headers]);
 
   const markConversationRead = useCallback(
     async (conversationId) => {
@@ -130,10 +190,16 @@ export default function MessageriePage() {
   }, [token, loadConversations]);
 
   useEffect(() => {
+    if (!token) return;
+    loadPatients();
+  }, [token, loadPatients]);
+
+  useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
       setError("");
       loadConversations();
+      loadPatients();
     };
 
     const handleOffline = () => {
@@ -149,7 +215,7 @@ export default function MessageriePage() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [loadConversations]);
+  }, [loadConversations, loadPatients]);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -162,9 +228,86 @@ export default function MessageriePage() {
     run();
   }, [selectedId, markConversationRead, loadConversations]);
 
+  useEffect(() => {
+    const term = patientSearch.trim().toLowerCase();
+
+    if (!term) {
+      setPatientSuggestions([]);
+      return;
+    }
+
+    const filtered = patients
+      .filter((p) => matchesPatientName(p, term))
+      .slice(0, 8);
+
+    setPatientSuggestions(filtered);
+  }, [patientSearch, patients]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setPatientSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleSelectPatient = async (patient) => {
+    try {
+      setError("");
+      setPatientSearch(getPatientFullName(patient));
+      setPatientSuggestions([]);
+      setShowSuggestions(false);
+      const res = await fetch(`${API}/patients/${patient.id}/dossier`, {
+        headers,
+      });
+      const txt = await res.text();
+      const dme = safeJsonParse(txt);
+
+      if (!res.ok) {
+        throw new Error(
+          dme?.message || "Impossible de récupérer le DME du patient.",
+        );
+      }
+
+      const dossier = dme?.data || dme;
+
+      if (!dossier?.id) {
+        throw new Error("Aucun DME trouvé pour ce patient.");
+      }
+
+      const existingConversation = conversations.find(
+        (c) => String(c.dme_id) === String(dossier.id),
+      );
+
+      if (existingConversation) {
+        setSelectedId(existingConversation.id);
+        setSelectedPatientDme(null);
+        setSelectedPatientName("");
+        return;
+      }
+
+      setSelectedId(null);
+      setSelectedPatientDme(dossier.id);
+      setSelectedPatientName(getPatientFullName(patient));
+    } catch (e) {
+      setError(e?.message || "Erreur lors de l’ouverture du dossier patient.");
+    }
+  };
+
   const selectedConversation = conversations.find(
     (c) => String(c.id) === String(selectedId),
   );
+
+  const effectiveDmeId = selectedConversation?.dme_id || selectedPatientDme;
+  const effectivePatientName =
+    selectedConversation?.patient_name || selectedPatientName;
 
   return (
     <Layout>
@@ -182,6 +325,56 @@ export default function MessageriePage() {
             </button>
           </div>
 
+          <div className="messagerie-search-box" ref={searchRef}>
+            <input
+              type="text"
+              placeholder="Rechercher un patient..."
+              value={patientSearch}
+              onChange={(e) => {
+                setPatientSearch(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => {
+                const term = patientSearch.trim().toLowerCase();
+                setShowSuggestions(true);
+                if (!term) return;
+
+                const filtered = patients
+                  .filter((p) => matchesPatientName(p, term))
+                  .slice(0, 8);
+
+                setPatientSuggestions(filtered);
+              }}
+            />
+
+            {showSuggestions ? (
+              loadingPatients ? (
+                <div className="search-dropdown">
+                  Chargement des patients...
+                </div>
+              ) : patientSuggestions.length > 0 ? (
+                <div className="search-dropdown">
+                  {patientSuggestions.map((patient) => (
+                    <div
+                      key={patient.id}
+                      className="search-item"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectPatient(patient);
+                      }}
+                    >
+                      {patient.user?.name} {patient.user?.surname}
+                    </div>
+                  ))}
+                </div>
+              ) : patientSearch.trim() ? (
+                <div className="search-dropdown">
+                  <div className="search-item empty">Aucun patient trouvé</div>
+                </div>
+              ) : null
+            ) : null}
+          </div>
+
           {!isOnline ? (
             <div className="msg-offline-banner">
               Mode hors ligne — affichage des conversations déjà chargées.
@@ -194,27 +387,31 @@ export default function MessageriePage() {
             {loading ? (
               <div className="msg-empty">Chargement…</div>
             ) : conversations.length === 0 ? (
-              <div className="msg-empty">Aucune conversation.</div>
+              <div className="msg-empty">Aucune conversation trouvée.</div>
             ) : (
               conversations.map((conv) => {
-                console.log(conv);
-                const active = String(conv.id) === String(selectedId);
+                const active =
+                  String(conv.id) === String(selectedId) && !selectedPatientDme;
 
                 return (
                   <button
                     key={conv.id}
                     type="button"
-                    className={`msg-item ${active ? "active" : ""}`}
-                    onClick={() => setSelectedId(conv.id)}
+                    onClick={() => {
+                      setSelectedId(conv.id);
+                      setSelectedPatientDme(null);
+                      setSelectedPatientName("");
+                      setPatientSuggestions([]);
+                    }}
+                    className={active ? "msg-item active" : "msg-item"}
                   >
                     <div className="msg-item-top">
                       <div className="msg-item-title">
-                        {conv.patient_name
-                          ? `Discussion DME du ${conv.patient_name}`
-                          : conv.title
-                            ? conv.title
-                            : `Discussion DME #${conv.dme_id || conv.id}`}
+                        {conv.patient_name ||
+                          conv.title ||
+                          `Conversation #${conv.id}`}
                       </div>
+
                       <div className="msg-item-time">
                         {formatDateTime(
                           conv?.last_message?.created_at || conv.updated_at,
@@ -222,7 +419,7 @@ export default function MessageriePage() {
                       </div>
                     </div>
 
-                    {/* <div className="msg-item-sub">DME #{conv.dme_id}</div> */}
+                    <div className="msg-item-sub">DME #{conv.dme_id}</div>
 
                     <div className="msg-item-preview">
                       {conv?.last_message?.sender_name
@@ -241,15 +438,16 @@ export default function MessageriePage() {
         </div>
 
         <div className="msg-content">
-          {!selectedConversation ? (
+          {!effectiveDmeId ? (
             <div className="msg-placeholder">
-              Sélectionnez une conversation.
+              Sélectionnez une conversation ou recherchez un patient.
             </div>
           ) : (
             <DmeChat
               apiBase={API}
               token={token}
-              dmeId={selectedConversation.dme_id}
+              dmeId={effectiveDmeId}
+              patientName={effectivePatientName}
               onConversationChanged={loadConversations}
             />
           )}

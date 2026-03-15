@@ -87,6 +87,8 @@ export default function DmeChat({
   const [error, setError] = useState("");
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
+  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const [isOnline, setIsOnline] = useState(
     typeof navigator !== "undefined" ? navigator.onLine : true,
   );
@@ -109,11 +111,21 @@ export default function DmeChat({
       "Content-Type": "application/json",
     };
   }, [token]);
-
-  const scrollToBottom = () => {
+  useEffect(() => {
+    if (!loading && messages.length > 0) {
+      requestAnimationFrame(() => {
+        scrollToBottom(false);
+      });
+    }
+  }, [messages, loading, dmeId]);
+  const scrollToBottom = (smooth = false) => {
     const el = listRef.current;
     if (!el) return;
-    el.scrollTop = el.scrollHeight;
+
+    el.scrollTo({
+      top: el.scrollHeight,
+      behavior: smooth ? "smooth" : "auto",
+    });
   };
 
   const showToast = (title, message) => {
@@ -196,8 +208,6 @@ export default function DmeChat({
       const data = safeJsonParse(txt) || [];
       const list = Array.isArray(data) ? data : [];
       setMessages(mergeQueuedMessages(list));
-
-      setTimeout(scrollToBottom, 0);
     } catch (e) {
       setError(e?.message || "Erreur réseau.");
       setMessages(mergeQueuedMessages([]));
@@ -313,7 +323,9 @@ export default function DmeChat({
       }
     } finally {
       syncInProgressRef.current = false;
-      setTimeout(scrollToBottom, 0);
+      requestAnimationFrame(() => {
+        scrollToBottom(true);
+      });
     }
   };
 
@@ -349,7 +361,9 @@ export default function DmeChat({
     };
 
     setMessages((prev) => [...prev, uiMessage]);
-    setTimeout(scrollToBottom, 0);
+    requestAnimationFrame(() => {
+      scrollToBottom(true);
+    });
   };
 
   const sendMessage = async () => {
@@ -383,7 +397,10 @@ export default function DmeChat({
     };
 
     setMessages((prev) => [...prev, optimistic]);
-    setTimeout(scrollToBottom, 0);
+
+    requestAnimationFrame(() => {
+      scrollToBottom(true);
+    });
 
     try {
       setSending(true);
@@ -430,7 +447,9 @@ export default function DmeChat({
         triggerConversationRefresh();
       }
 
-      setTimeout(scrollToBottom, 0);
+      requestAnimationFrame(() => {
+        scrollToBottom(true);
+      });
     } catch (e) {
       console.error("sendMessage error:", e);
 
@@ -542,7 +561,9 @@ export default function DmeChat({
           playBeep();
         }
 
-        setTimeout(scrollToBottom, 0);
+        requestAnimationFrame(() => {
+          scrollToBottom(true);
+        });
       });
 
     return () => {
@@ -590,8 +611,6 @@ export default function DmeChat({
             >
               {isOnline ? "En ligne" : "Hors ligne"}
             </span>
-
-            
           </div>
         </div>
 

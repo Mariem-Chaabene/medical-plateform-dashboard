@@ -93,7 +93,6 @@ export default function TypeAnalyses() {
       ),
       width: 30,
     },
-    { label: "ID", key: "id", render: (_, row) => row.id },
     { label: "Libellé", key: "libelle", render: (_, row) => row.libelle || "" },
   ];
 

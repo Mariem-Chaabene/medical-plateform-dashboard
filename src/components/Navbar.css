@@ -135,3 +135,7 @@
     padding: 14px 8px 2px 8px;
   }
 }
+.navbar__logo {
+  height: 48px; /* ajuste selon ton design */
+  object-fit: contain;
+}

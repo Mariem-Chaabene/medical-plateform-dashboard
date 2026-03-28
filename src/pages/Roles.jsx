@@ -86,7 +86,6 @@ export default function Roles() {
       ),
       width: 30,
     },
-    { label: "ID", key: "id", render: (_, row) => row.id },
     { label: "Nom", key: "name", render: (_, row) => row.name || "" },
   ];
 

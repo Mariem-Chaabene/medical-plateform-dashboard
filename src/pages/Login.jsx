@@ -8,6 +8,7 @@ import Input from "../components/ui/Input/Input";
 import PasswordInput from "../components/ui/Input/PasswordInput";
 import Button from "../components/ui/Button/Button";
 import "./Login.css";
+import logologin from "../assets/logologin.jpg"; // 
 
 const schema = yup.object().shape({
   email: yup.string().email("Email invalide").required(),
@@ -39,12 +40,9 @@ export default function Login() {
   return (
     <div className="login-layout">
       <div className="login-card">
-        <div className="login-card__logo">
-          <svg width="55" height="55" viewBox="0 0 24 24" fill="#48c6ef">
-            <rect x="10" y="4" width="4" height="16" rx="2"></rect>
-            <rect x="4" y="10" width="16" height="4" rx="2"></rect>
-          </svg>
-        </div>
+        
+               <img src={logologin} alt="Logo" className="logologin" />
+        
         <h2 className="login-card__title">Plateforme Médicale</h2>
         <form onSubmit={handleSubmit(onSubmit)} className="login-card__form">
           <Input
@@ -76,21 +74,10 @@ export default function Login() {
       </div>
       <div className="login-theme">
         <div className="login-theme__container">
-          <svg width="120" height="120" viewBox="0 0 24 24" fill="#fff">
-            <circle cx="12" cy="12" r="10" fill="#48c6ef" opacity="0.2" />
-            <path d="M12 8a4 4 0 100 8 4 4 0 000-8z" fill="#fff" />
-            <rect x="11" y="3" width="2" height="7" fill="#fff" />
-            <rect x="11" y="14" width="2" height="7" fill="#fff" />
-            <rect x="3" y="11" width="7" height="2" fill="#fff" />
-            <rect x="14" y="11" width="7" height="2" fill="#fff" />
-          </svg>
+          
           <h3 className="login-theme__title">
             Bienvenue sur la plateforme médicale
           </h3>
-          <p className="login-theme__desc">
-            Accédez à la gestion des dossiers, à la messagerie interne, et aux alertes patients.<br />
-            Protégez les données et facilitez la coordination médicale en toute sécurité.
-          </p>
         </div>
       </div>
     </div>

@@ -375,11 +375,7 @@ export default function MessageriePage() {
             ) : null}
           </div>
 
-          {!isOnline ? (
-            <div className="msg-offline-banner">
-              Mode hors ligne — affichage des conversations déjà chargées.
-            </div>
-          ) : null}
+          
 
           {error ? <div className="msg-error">{error}</div> : null}
 

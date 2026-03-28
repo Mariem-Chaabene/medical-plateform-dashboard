@@ -92,8 +92,6 @@ export default function TypeAntecedants() {
       ),
       width: 30,
     },
-    { label: "ID", key: "id", render: (_, row) => row.id },
-    { label: "Code", key: "code", render: (_, row) => row.code || "" },
     { label: "Libellé", key: "libelle", render: (_, row) => row.libelle || "" },
   ];
 

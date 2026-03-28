@@ -3,7 +3,7 @@ import Avatar from "./ui/Avatar/Avatar";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-
+import logo from "../assets/logo.jpg"; // 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -16,7 +16,7 @@ export default function Navbar() {
 
   return (
     <nav className="navbar">
-      <div className="navbar__title">Plateforme Médicale</div>
+       <img src={logo} alt="Logo" className="navbar__logo" />
       <div className="navbar__actions">
         <Avatar
           src={
